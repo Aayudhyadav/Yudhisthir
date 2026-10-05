@@ -337,82 +337,140 @@ refreshAll();loadSettings();
 
   async function initializeOnlineStudents() {
 
-    try {
+  try {
 
-      const onlineStudents =
-        await loadStudentsFromFirebase();
+    console.log("☁️ Firebase students loading...");
 
-      if (
-        Array.isArray(onlineStudents) &&
-        onlineStudents.length > 0
-      ) {
+    const onlineStudents =
+      await loadStudentsFromFirebase();
 
-        /*
-          Firebase को master database माना जाएगा.
-          इससे दूसरे PC/mobile पर भी वही students आएँगे.
-        */
+    /*
+      Firebase + LocalStorage दोनों को merge करेंगे.
+      Student ID duplicate होने पर Firebase वाला record
+      latest/master record माना जाएगा.
+    */
 
-        students = onlineStudents;
+    const localStudents =
+      Array.isArray(students) ? students : [];
 
-        /*
-          Local backup भी रख रहे हैं.
-          Internet temporarily unavailable होने पर
-          existing browser data पूरी तरह गायब नहीं होगा.
-        */
+    const firebaseList =
+      Array.isArray(onlineStudents)
+        ? onlineStudents
+        : [];
 
-        localStorage.setItem(
-          KEY.students,
-          JSON.stringify(students)
-        );
+    const mergedMap = new Map();
 
-        if (typeof renderStudents === "function") {
-          renderStudents();
-        }
+    /* पहले local students */
+    localStudents.forEach(student => {
 
-        if (typeof refreshAll === "function") {
-          refreshAll();
-        }
+      if (!student || !student.id) return;
 
-        console.log(
-          "✅ Student List Firebase से load हो गई"
-        );
+      mergedMap.set(
+        String(student.id).toUpperCase(),
+        student
+      );
 
-      } else {
+    });
 
-        /*
-          अगर Firebase में अभी कोई student नहीं है,
-          तो current local students को पहली बार
-          Firebase में upload किया जाएगा.
-        */
+    /* फिर Firebase students */
+    firebaseList.forEach(student => {
 
-        if (
-          Array.isArray(students) &&
-          students.length > 0
-        ) {
+      if (!student || !student.id) return;
 
-          console.log(
-            "☁️ Firebase empty है. Existing local students upload हो रहे हैं..."
-          );
+      mergedMap.set(
+        String(student.id).toUpperCase(),
+        student
+      );
 
-          await saveAllStudentsToFirebase(students);
+    });
 
-          console.log(
-            "✅ Existing students Firebase में migrate हो गए"
-          );
-        }
-      }
+    const mergedStudents =
+      Array.from(mergedMap.values());
 
-    } catch (error) {
+    console.log(
+      `📊 Local: ${localStudents.length}`
+    );
 
-      console.error(
-        "Online student initialization error:",
-        error
+    console.log(
+      `☁️ Firebase: ${firebaseList.length}`
+    );
+
+    console.log(
+      `🔄 Merged: ${mergedStudents.length}`
+    );
+
+
+    /*
+      अगर local students Firebase में नहीं हैं,
+      तो उन्हें Firebase में upload करें.
+    */
+
+    if (localStudents.length > 0) {
+
+      console.log(
+        "☁️ Syncing local students to Firebase..."
+      );
+
+      await saveAllStudentsToFirebase(
+        localStudents
       );
 
     }
+
+
+    /*
+      Firebase + LocalStorage merged list
+    */
+
+    students = mergedStudents;
+
+
+    /*
+      Local backup भी update करें.
+    */
+
+    localStorage.setItem(
+      KEY.students,
+      JSON.stringify(students)
+    );
+
+
+    /*
+      UI refresh
+    */
+
+    if (
+      typeof renderStudents === "function"
+    ) {
+      renderStudents();
+    }
+
+    if (
+      typeof refreshAll === "function"
+    ) {
+      refreshAll();
+    }
+
+
+    console.log(
+      "✅ Student database synchronization complete"
+    );
+
+    console.log(
+      `👨‍🎓 Total students: ${students.length}`
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "❌ Online student initialization error:",
+      error
+    );
+
   }
 
-
+}
   /* =====================================================
      OVERRIDE BULK IMPORT
   ===================================================== */
