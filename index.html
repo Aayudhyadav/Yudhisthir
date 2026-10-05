@@ -139,13 +139,21 @@ function refreshAll(){renderStudents();renderAttendance();renderMarks();renderFe
 function logout(){localStorage.removeItem('PG_LOGIN_ROLE');localStorage.removeItem('PG_LOGIN_STUDENT_ID');location.reload()}
 refreshAll();loadSettings();
 </script>
-  <!-- Firebase SDK -->
+ <!-- ================= FIREBASE STUDENT DATABASE ================= -->
 <script type="module">
   import { initializeApp } 
     from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 
-  import { getFirestore } 
-    from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+  import {
+    getFirestore,
+    collection,
+    getDocs,
+    setDoc,
+    doc,
+    deleteDoc
+  } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+  /* ================= FIREBASE CONFIG ================= */
 
   const firebaseConfig = {
     apiKey: "AIzaSyCrWfnMsg1l2YYPeGBONATnSLZx5MYfhCo",
@@ -157,13 +165,429 @@ refreshAll();loadSettings();
     measurementId: "G-PZZ5QERD05"
   };
 
+  /* ================= INITIALIZE ================= */
+
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // बाकी JavaScript के लिए उपलब्ध कराना
   window.firebaseApp = app;
   window.firebaseDB = db;
 
   console.log("🔥 Firebase Connected Successfully!");
+
+  /* =====================================================
+     FIREBASE STUDENT FUNCTIONS
+  ===================================================== */
+
+  async function saveStudentToFirebase(student) {
+    try {
+
+      if (!student || !student.id) {
+        throw new Error("Student ID missing");
+      }
+
+      await setDoc(
+        doc(db, "students", String(student.id)),
+        student,
+        { merge: true }
+      );
+
+      console.log("☁️ Student saved:", student.id);
+
+      return true;
+
+    } catch (error) {
+
+      console.error("Firebase student save error:", error);
+
+      alert(
+        "Student Firebase में save नहीं हो पाया.\n\n" +
+        error.message
+      );
+
+      return false;
+    }
+  }
+
+
+  async function saveAllStudentsToFirebase(studentList) {
+
+    if (!Array.isArray(studentList)) return;
+
+    let success = 0;
+
+    for (const student of studentList) {
+
+      if (!student || !student.id) continue;
+
+      try {
+
+        await setDoc(
+          doc(db, "students", String(student.id)),
+          student,
+          { merge: true }
+        );
+
+        success++;
+
+      } catch (error) {
+
+        console.error(
+          "Student save failed:",
+          student.id,
+          error
+        );
+
+      }
+    }
+
+    console.log(
+      `☁️ ${success} students synced to Firebase`
+    );
+
+    return success;
+  }
+
+
+  async function loadStudentsFromFirebase() {
+
+    try {
+
+      console.log("☁️ Loading students from Firebase...");
+
+      const snapshot =
+        await getDocs(collection(db, "students"));
+
+      const firebaseStudents = [];
+
+      snapshot.forEach((item) => {
+
+        firebaseStudents.push({
+          ...item.data(),
+          id: item.id
+        });
+
+      });
+
+      console.log(
+        `☁️ ${firebaseStudents.length} students loaded from Firebase`
+      );
+
+      return firebaseStudents;
+
+    } catch (error) {
+
+      console.error(
+        "Firebase student load error:",
+        error
+      );
+
+      return null;
+    }
+  }
+
+
+  async function deleteStudentFromFirebase(studentId) {
+
+    try {
+
+      await deleteDoc(
+        doc(db, "students", String(studentId))
+      );
+
+      console.log(
+        "🗑️ Student deleted from Firebase:",
+        studentId
+      );
+
+      return true;
+
+    } catch (error) {
+
+      console.error(
+        "Firebase delete error:",
+        error
+      );
+
+      return false;
+    }
+  }
+
+
+  /* =====================================================
+     MAKE FUNCTIONS AVAILABLE
+  ===================================================== */
+
+  window.firebaseStudentAPI = {
+
+    saveStudent: saveStudentToFirebase,
+
+    saveAllStudents: saveAllStudentsToFirebase,
+
+    loadStudents: loadStudentsFromFirebase,
+
+    deleteStudent: deleteStudentFromFirebase
+
+  };
+
+
+  /* =====================================================
+     LOAD FIREBASE STUDENTS
+  ===================================================== */
+
+  async function initializeOnlineStudents() {
+
+    try {
+
+      const onlineStudents =
+        await loadStudentsFromFirebase();
+
+      if (
+        Array.isArray(onlineStudents) &&
+        onlineStudents.length > 0
+      ) {
+
+        /*
+          Firebase को master database माना जाएगा.
+          इससे दूसरे PC/mobile पर भी वही students आएँगे.
+        */
+
+        students = onlineStudents;
+
+        /*
+          Local backup भी रख रहे हैं.
+          Internet temporarily unavailable होने पर
+          existing browser data पूरी तरह गायब नहीं होगा.
+        */
+
+        localStorage.setItem(
+          KEY.students,
+          JSON.stringify(students)
+        );
+
+        if (typeof renderStudents === "function") {
+          renderStudents();
+        }
+
+        if (typeof refreshAll === "function") {
+          refreshAll();
+        }
+
+        console.log(
+          "✅ Student List Firebase से load हो गई"
+        );
+
+      } else {
+
+        /*
+          अगर Firebase में अभी कोई student नहीं है,
+          तो current local students को पहली बार
+          Firebase में upload किया जाएगा.
+        */
+
+        if (
+          Array.isArray(students) &&
+          students.length > 0
+        ) {
+
+          console.log(
+            "☁️ Firebase empty है. Existing local students upload हो रहे हैं..."
+          );
+
+          await saveAllStudentsToFirebase(students);
+
+          console.log(
+            "✅ Existing students Firebase में migrate हो गए"
+          );
+        }
+      }
+
+    } catch (error) {
+
+      console.error(
+        "Online student initialization error:",
+        error
+      );
+
+    }
+  }
+
+
+  /* =====================================================
+     OVERRIDE BULK IMPORT
+  ===================================================== */
+
+  const originalImportBulkStudents =
+    window.importBulkStudents;
+
+  window.importBulkStudents = async function () {
+
+    if (
+      typeof originalImportBulkStudents !== "function"
+    ) {
+
+      console.error(
+        "Original bulk import function नहीं मिला."
+      );
+
+      return;
+    }
+
+    /*
+      पहले आपका existing import चलेगा.
+      इससे आपका existing validation,
+      duplicate checking और UI बना रहेगा.
+    */
+
+    originalImportBulkStudents();
+
+    /*
+      थोड़ी देर बाद updated students Firebase में जाएंगे.
+    */
+
+    setTimeout(async () => {
+
+      try {
+
+        if (
+          window.firebaseStudentAPI &&
+          Array.isArray(students)
+        ) {
+
+          await window.firebaseStudentAPI.saveAllStudents(
+            students
+          );
+
+          console.log(
+            "☁️ Bulk Import Firebase में save हो गया"
+          );
+
+          toast(
+            "☁️ Students Firebase में online save हो गए"
+          );
+        }
+
+      } catch (error) {
+
+        console.error(
+          "Bulk Firebase sync error:",
+          error
+        );
+
+      }
+
+    }, 300);
+
+  };
+
+
+  /* =====================================================
+     OVERRIDE DELETE
+  ===================================================== */
+
+  const originalDeleteStudent =
+    window.deleteStudent;
+
+  window.deleteStudent = async function (id) {
+
+    if (
+      typeof originalDeleteStudent !== "function"
+    ) return;
+
+    const oldStudent =
+      students.find(
+        s => String(s.id) === String(id)
+      );
+
+    /*
+      Existing delete confirmation + UI
+    */
+
+    originalDeleteStudent(id);
+
+    /*
+      Firebase से भी delete
+    */
+
+    setTimeout(async () => {
+
+      if (oldStudent) {
+
+        await window.firebaseStudentAPI
+          .deleteStudent(id);
+
+        console.log(
+          "☁️ Student Firebase से delete हो गया:",
+          id
+        );
+      }
+
+    }, 300);
+
+  };
+
+
+  /* =====================================================
+     OVERRIDE SAVE STUDENT
+  ===================================================== */
+
+  const originalSaveStudent =
+    window.saveStudent;
+
+  window.saveStudent = async function (event) {
+
+    if (
+      typeof originalSaveStudent !== "function"
+    ) return;
+
+    /*
+      Existing Add/Edit Student process
+    */
+
+    originalSaveStudent(event);
+
+    /*
+      Updated student list Firebase में sync
+    */
+
+    setTimeout(async () => {
+
+      try {
+
+        if (
+          Array.isArray(students) &&
+          window.firebaseStudentAPI
+        ) {
+
+          await window.firebaseStudentAPI
+            .saveAllStudents(students);
+
+          console.log(
+            "☁️ Student Add/Edit Firebase में save हो गया"
+          );
+
+        }
+
+      } catch (error) {
+
+        console.error(
+          "Student Firebase sync error:",
+          error
+        );
+
+      }
+
+    }, 300);
+
+  };
+
+
+  /* =====================================================
+     START ONLINE DATABASE
+  ===================================================== */
+
+  initializeOnlineStudents();
+
 </script>
+<!-- ================= END FIREBASE STUDENT DATABASE ================= -->
 </body></html>
