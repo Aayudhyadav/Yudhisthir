@@ -106,7 +106,8 @@ function getVisibleStudents(){return currentRole==='student'?students.filter(s=>
 function requireAdmin(){if(currentRole!=='admin'){toast('Student account read-only है');return false}return true}
 function logout(){localStorage.removeItem('PG_LOGIN_ROLE');localStorage.removeItem('PG_LOGIN_STUDENT_ID');location.reload()}
 
-let students=load(KEY.students,[]), attendance=load(KEY.attendance,{}), marks=load(KEY.marks,[]), fees=load(KEY.fees,[]), settings=load(KEY.settings,null);
+var students=load(KEY.students,[]), attendance=load(KEY.attendance,{}), marks=load(KEY.marks,[]), fees=load(KEY.fees,[]), settings=load(KEY.settings,null);
+window.students=students;window.attendance=attendance;window.marks=marks;window.fees=fees;window.settings=settings;
 if(!students.length){students=[{id:'PG2026001',name:'Aarav Sharma',father:'Rajesh Sharma',mother:'Sunita Sharma',className:'VIII',section:'A',mobile:'9876543210',address:'Haridwar'},{id:'PG2026002',name:'Ananya Verma',father:'Amit Verma',mother:'Pooja Verma',className:'IX',section:'B',mobile:'9876543211',address:'Rishikesh'},{id:'PG2026003',name:'Rohan Singh',father:'Vijay Singh',mother:'Kavita Singh',className:'VII',section:'A',mobile:'9876543212',address:'Dehradun'}];save(KEY.students,students)}
 students.forEach(s=>{s.className=classRoman(s.className);delete s.rollNo;if(!s.password)s.password='1234';});save(KEY.students,students);auth=load('PG_AUTH',auth);save('PG_AUTH',auth);
 if(currentRole){document.getElementById('loginScreen').style.display='none'}else{selectLoginRole('admin')}
@@ -178,516 +179,482 @@ function refreshAll(){renderStudents();renderAttendance();renderMarks();renderFe
 function logout(){localStorage.removeItem('PG_LOGIN_ROLE');localStorage.removeItem('PG_LOGIN_STUDENT_ID');location.reload()}
 refreshAll();loadSettings();
 </script>
- <!-- ================= FIREBASE STUDENT DATABASE ================= -->
+ <!-- ================= FIREBASE ONLINE DATABASE ================= -->
 <script type="module">
-  import { initializeApp } 
-    from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-
-  import {
-    getFirestore,
-    collection,
-    getDocs,
-    setDoc,
-    doc,
-    deleteDoc
-  } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
-  /* ================= FIREBASE CONFIG ================= */
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCrWfnMsg1l2YYPeGBONATnSLZx5MYfhCo",
-    authDomain: "school-erp-b6621.firebaseapp.com",
-    projectId: "school-erp-b6621",
-    storageBucket: "school-erp-b6621.firebasestorage.app",
-    messagingSenderId: "122256271530",
-    appId: "1:122256271530:web:6dfc50e44ed589dbe208d3",
-    measurementId: "G-PZZ5QERD05"
-  };
-
-  /* ================= INITIALIZE ================= */
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  window.firebaseApp = app;
-  window.firebaseDB = db;
-
-  console.log("🔥 Firebase Connected Successfully!");
-
-  /* =====================================================
-     FIREBASE STUDENT FUNCTIONS
-  ===================================================== */
-
-  async function saveStudentToFirebase(student) {
-    try {
-
-      if (!student || !student.id) {
-        throw new Error("Student ID missing");
-      }
-
-      await setDoc(
-        doc(db, "students", String(student.id)),
-        student,
-        { merge: true }
-      );
-
-      console.log("☁️ Student saved:", student.id);
-
-      return true;
-
-    } catch (error) {
-
-      console.error("Firebase student save error:", error);
-
-      alert(
-        "Student Firebase में save नहीं हो पाया.\n\n" +
-        error.message
-      );
-
-      return false;
-    }
-  }
-
-
-  async function saveAllStudentsToFirebase(studentList) {
-
-    if (!Array.isArray(studentList)) return;
-
-    let success = 0;
-
-    for (const student of studentList) {
-
-      if (!student || !student.id) continue;
-
-      try {
-
-        await setDoc(
-          doc(db, "students", String(student.id)),
-          student,
-          { merge: true }
-        );
-
-        success++;
-
-      } catch (error) {
-
-        console.error(
-          "Student save failed:",
-          student.id,
-          error
-        );
-
-      }
-    }
-
-    console.log(
-      `☁️ ${success} students synced to Firebase`
-    );
-
-    return success;
-  }
-
-
-  async function loadStudentsFromFirebase() {
-
-    try {
-
-      console.log("☁️ Loading students from Firebase...");
-
-      const snapshot =
-        await getDocs(collection(db, "students"));
-
-      const firebaseStudents = [];
-
-      snapshot.forEach((item) => {
-
-        firebaseStudents.push({
-          ...item.data(),
-          id: item.id
-        });
-
-      });
-
-      console.log(
-        `☁️ ${firebaseStudents.length} students loaded from Firebase`
-      );
-
-      return firebaseStudents;
-
-    } catch (error) {
-
-      console.error(
-        "Firebase student load error:",
-        error
-      );
-
-      return null;
-    }
-  }
-
-
-  async function deleteStudentFromFirebase(studentId) {
-
-    try {
-
-      await deleteDoc(
-        doc(db, "students", String(studentId))
-      );
-
-      console.log(
-        "🗑️ Student deleted from Firebase:",
-        studentId
-      );
-
-      return true;
-
-    } catch (error) {
-
-      console.error(
-        "Firebase delete error:",
-        error
-      );
-
-      return false;
-    }
-  }
-
-
-  /* =====================================================
-     MAKE FUNCTIONS AVAILABLE
-  ===================================================== */
-
-  window.firebaseStudentAPI = {
-
-    saveStudent: saveStudentToFirebase,
-
-    saveAllStudents: saveAllStudentsToFirebase,
-
-    loadStudents: loadStudentsFromFirebase,
-
-    deleteStudent: deleteStudentFromFirebase
-
-  };
-
-
-  /* =====================================================
-     LOAD FIREBASE STUDENTS
-  ===================================================== */
-
-  async function initializeOnlineStudents() {
-
-  try {
-
-    console.log("☁️ Firebase students loading...");
-
-    const onlineStudents =
-      await loadStudentsFromFirebase();
-
-    /*
-      Firebase + LocalStorage दोनों को merge करेंगे.
-      Student ID duplicate होने पर Firebase वाला record
-      latest/master record माना जाएगा.
-    */
-
-    const localStudents =
-      Array.isArray(students) ? students : [];
-
-    const firebaseList =
-      Array.isArray(onlineStudents)
-        ? onlineStudents
-        : [];
-
-    const mergedMap = new Map();
-
-    /* पहले local students */
-    localStudents.forEach(student => {
-
-      if (!student || !student.id) return;
-
-      mergedMap.set(
-        String(student.id).toUpperCase(),
-        student
-      );
-
-    });
-
-    /* फिर Firebase students */
-    firebaseList.forEach(student => {
-
-      if (!student || !student.id) return;
-
-      mergedMap.set(
-        String(student.id).toUpperCase(),
-        student
-      );
-
-    });
-
-    const mergedStudents =
-      Array.from(mergedMap.values());
-
-    console.log(
-      `📊 Local: ${localStudents.length}`
-    );
-
-    console.log(
-      `☁️ Firebase: ${firebaseList.length}`
-    );
-
-    console.log(
-      `🔄 Merged: ${mergedStudents.length}`
-    );
-
-
-    /*
-      अगर local students Firebase में नहीं हैं,
-      तो उन्हें Firebase में upload करें.
-    */
-
-    if (localStudents.length > 0) {
-
-      console.log(
-        "☁️ Syncing local students to Firebase..."
-      );
-
-      await saveAllStudentsToFirebase(
-        localStudents
-      );
-
-    }
-
-
-    /*
-      Firebase + LocalStorage merged list
-    */
-
-    students = mergedStudents;
-
-
-    /*
-      Local backup भी update करें.
-    */
-
-    localStorage.setItem(
-      KEY.students,
-      JSON.stringify(students)
-    );
-
-
-    /*
-      UI refresh
-    */
-
-    if (
-      typeof renderStudents === "function"
-    ) {
-      renderStudents();
-    }
-
-    if (
-      typeof refreshAll === "function"
-    ) {
-      refreshAll();
-    }
-
-
-    console.log(
-      "✅ Student database synchronization complete"
-    );
-
-    console.log(
-      `👨‍🎓 Total students: ${students.length}`
-    );
-
-
-  } catch (error) {
-
-    console.error(
-      "❌ Online student initialization error:",
-      error
-    );
-
-  }
-
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  setDoc,
+  doc,
+  deleteDoc,
+  writeBatch
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCrWfnMsg1l2YYPeGBONATnSLZx5MYfhCo",
+  authDomain: "school-erp-b6621.firebaseapp.com",
+  projectId: "school-erp-b6621",
+  storageBucket: "school-erp-b6621.firebasestorage.app",
+  messagingSenderId: "122256271530",
+  appId: "1:122256271530:web:6dfc50e44ed589dbe208d3",
+  measurementId: "G-PZZ5QERD05"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window.firebaseApp = app;
+window.firebaseDB = db;
+window.firebaseOnline = true;
+console.log("🔥 Firebase Connected Successfully!");
+
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function toastSafe(message){
+  try { if(typeof toast === "function") toast(message); } catch(e) {}
 }
-  /* =====================================================
-     OVERRIDE BULK IMPORT
-  ===================================================== */
 
-  const originalImportBulkStudents =
-    window.importBulkStudents;
+function currentStudents(){ return Array.isArray(window.students) ? window.students : []; }
+function currentAttendance(){ return window.attendance && typeof window.attendance === 'object' ? window.attendance : {}; }
+function currentMarks(){ return Array.isArray(window.marks) ? window.marks : []; }
+function currentFees(){ return Array.isArray(window.fees) ? window.fees : []; }
 
-  window.importBulkStudents = async function () {
+function saveLocal(key, value){
+  localStorage.setItem(key, JSON.stringify(value));
+}
 
-    if (
-      typeof originalImportBulkStudents !== "function"
-    ) {
+/* =========================================================
+   STUDENTS
+========================================================= */
+async function saveStudentToFirebase(student){
+  if(!student || !student.id) return false;
+  try{
+    await setDoc(doc(db, "students", String(student.id)), student, {merge:true});
+    return true;
+  }catch(error){
+    console.error("Student Firebase save error:", error);
+    return false;
+  }
+}
 
-      console.error(
-        "Original bulk import function नहीं मिला."
-      );
+async function saveAllStudentsToFirebase(list){
+  if(!Array.isArray(list) || !list.length) return 0;
+  let success = 0;
+  for(let start=0; start<list.length; start+=450){
+    const batch = writeBatch(db);
+    const chunk = list.slice(start, start+450);
+    for(const student of chunk){
+      if(!student || !student.id) continue;
+      batch.set(doc(db,"students",String(student.id)), student, {merge:true});
+    }
+    try{
+      await batch.commit();
+      success += chunk.filter(s=>s && s.id).length;
+    }catch(error){
+      console.error("Student batch upload error:", error);
+    }
+  }
+  console.log(`☁️ ${success} students synced to Firebase`);
+  return success;
+}
 
-      return;
+async function loadStudentsFromFirebase(){
+  try{
+    const snapshot = await getDocs(collection(db,"students"));
+    return snapshot.docs.map(item => ({...item.data(), id:item.id}));
+  }catch(error){
+    console.error("Firebase student load error:", error);
+    return null;
+  }
+}
+
+async function deleteStudentFromFirebase(studentId){
+  if(!studentId) return false;
+  try{
+    await deleteDoc(doc(db,"students",String(studentId)));
+    return true;
+  }catch(error){
+    console.error("Firebase student delete error:", error);
+    return false;
+  }
+}
+
+window.firebaseStudentAPI = {
+  saveStudent: saveStudentToFirebase,
+  saveAllStudents: saveAllStudentsToFirebase,
+  saveAllStudentsToFirebase,
+  loadStudents: loadStudentsFromFirebase,
+  deleteStudent: deleteStudentFromFirebase
+};
+
+async function initializeOnlineStudents(){
+  try{
+    const localList = currentStudents();
+    const onlineList = (await loadStudentsFromFirebase()) || [];
+    const map = new Map();
+
+    /* Local records are kept first so an offline/new import is not lost. */
+    localList.forEach(s => { if(s && s.id) map.set(String(s.id), s); });
+    /* Firebase is the online master when the same ID exists. */
+    onlineList.forEach(s => { if(s && s.id) map.set(String(s.id), {...(map.get(String(s.id))||{}), ...s}); });
+
+    const merged = Array.from(map.values());
+    window.students = merged;
+    saveLocal("PG_STUDENTS", merged);
+
+    /* Upload only local records that were not already present online. */
+    const onlineIds = new Set(onlineList.map(s=>String(s.id)));
+    const localOnly = localList.filter(s=>s && s.id && !onlineIds.has(String(s.id)));
+    if(localOnly.length) await saveAllStudentsToFirebase(localOnly);
+
+    try { refreshAll(); } catch(e) {}
+    console.log(`☁️ Online students ready: ${merged.length}`);
+  }catch(error){
+    console.error("Online student initialization error:", error);
+  }
+}
+
+/* =========================================================
+   ATTENDANCE
+   Firestore: attendance/{date} -> {date, records, updatedAt}
+========================================================= */
+async function saveAttendanceDateToFirebase(date, records){
+  if(!date) return false;
+  try{
+    await setDoc(doc(db,"attendance",String(date)), {
+      date:String(date),
+      records:records || {},
+      updatedAt:new Date().toISOString()
+    }, {merge:true});
+    return true;
+  }catch(error){
+    console.error("Attendance Firebase save error:", error);
+    return false;
+  }
+}
+
+async function loadAttendanceFromFirebase(){
+  try{
+    const snapshot = await getDocs(collection(db,"attendance"));
+    const online = {};
+    snapshot.forEach(item=>{
+      const d=item.data()||{};
+      const date=String(d.date||item.id);
+      online[date]=d.records||{};
+    });
+    return online;
+  }catch(error){
+    console.error("Attendance Firebase load error:", error);
+    return null;
+  }
+}
+
+async function deleteAttendanceDateFromFirebase(date){
+  if(!date) return false;
+  try{
+    await deleteDoc(doc(db,"attendance",String(date)));
+    return true;
+  }catch(error){
+    console.error("Attendance Firebase delete error:", error);
+    return false;
+  }
+}
+
+/* =========================================================
+   MARKS
+   Firestore: marks/{studentId__exam} -> mark record
+========================================================= */
+function markDocId(mark){
+  return encodeURIComponent(`${mark.studentId||''}__${mark.exam||''}`);
+}
+
+async function saveMarkToFirebase(mark){
+  if(!mark || !mark.studentId || !mark.exam) return false;
+  try{
+    await setDoc(doc(db,"marks",markDocId(mark)), {
+      ...mark,
+      updatedAt:new Date().toISOString()
+    }, {merge:true});
+    return true;
+  }catch(error){
+    console.error("Marks Firebase save error:", error);
+    return false;
+  }
+}
+
+async function saveAllMarksToFirebase(list){
+  if(!Array.isArray(list) || !list.length) return 0;
+  let success=0;
+  for(let start=0; start<list.length; start+=450){
+    const batch=writeBatch(db);
+    const chunk=list.slice(start,start+450);
+    for(const mark of chunk){
+      if(!mark || !mark.studentId || !mark.exam) continue;
+      batch.set(doc(db,"marks",markDocId(mark)), {...mark,updatedAt:new Date().toISOString()},{merge:true});
+    }
+    try{ await batch.commit(); success += chunk.filter(m=>m&&m.studentId&&m.exam).length; }
+    catch(error){ console.error("Marks batch upload error:",error); }
+  }
+  return success;
+}
+
+async function loadMarksFromFirebase(){
+  try{
+    const snapshot=await getDocs(collection(db,"marks"));
+    return snapshot.docs.map(item=>item.data()).filter(x=>x&&x.studentId&&x.exam);
+  }catch(error){
+    console.error("Marks Firebase load error:",error);
+    return null;
+  }
+}
+
+async function deleteMarkFromFirebase(mark){
+  if(!mark || !mark.studentId || !mark.exam) return false;
+  try{ await deleteDoc(doc(db,"marks",markDocId(mark))); return true; }
+  catch(error){ console.error("Marks Firebase delete error:",error); return false; }
+}
+
+/* =========================================================
+   FEES
+   Firestore: fees/{receipt} -> fee record
+========================================================= */
+async function saveFeeToFirebase(fee){
+  if(!fee || !fee.receipt) return false;
+  try{
+    await setDoc(doc(db,"fees",String(fee.receipt)), {
+      ...fee,
+      updatedAt:new Date().toISOString()
+    }, {merge:true});
+    return true;
+  }catch(error){
+    console.error("Fee Firebase save error:",error);
+    return false;
+  }
+}
+
+async function saveAllFeesToFirebase(list){
+  if(!Array.isArray(list) || !list.length) return 0;
+  let success=0;
+  for(let start=0; start<list.length; start+=450){
+    const batch=writeBatch(db);
+    const chunk=list.slice(start,start+450);
+    for(const fee of chunk){
+      if(!fee || !fee.receipt) continue;
+      batch.set(doc(db,"fees",String(fee.receipt)), {...fee,updatedAt:new Date().toISOString()},{merge:true});
+    }
+    try{ await batch.commit(); success += chunk.filter(f=>f&&f.receipt).length; }
+    catch(error){ console.error("Fees batch upload error:",error); }
+  }
+  return success;
+}
+
+async function loadFeesFromFirebase(){
+  try{
+    const snapshot=await getDocs(collection(db,"fees"));
+    return snapshot.docs.map(item=>({...item.data(),receipt:item.data()?.receipt||item.id})).filter(x=>x&&x.receipt);
+  }catch(error){
+    console.error("Fees Firebase load error:",error);
+    return null;
+  }
+}
+
+async function deleteFeeFromFirebase(receipt){
+  if(!receipt) return false;
+  try{ await deleteDoc(doc(db,"fees",String(receipt))); return true; }
+  catch(error){ console.error("Fee Firebase delete error:",error); return false; }
+}
+
+/* =========================================================
+   LOAD + MERGE ALL ACADEMIC DATA
+========================================================= */
+async function loadOnlineAcademicData(){
+  try{
+    const [remoteAttendance, remoteMarks, remoteFees] = await Promise.all([
+      loadAttendanceFromFirebase(),
+      loadMarksFromFirebase(),
+      loadFeesFromFirebase()
+    ]);
+
+    /* Attendance: remote value wins for the same date/student. */
+    const localAtt = {...currentAttendance()};
+    const mergedAtt = {...localAtt};
+    if(remoteAttendance){
+      Object.entries(remoteAttendance).forEach(([date,records])=>{
+        mergedAtt[date] = {...(mergedAtt[date]||{}), ...(records||{})};
+      });
+    }
+    window.attendance = mergedAtt;
+    saveLocal("PG_ATTENDANCE",mergedAtt);
+
+    /* Marks: remote record wins for the same student+exam. */
+    const markMap=new Map();
+    currentMarks().forEach(m=>{ if(m&&m.studentId&&m.exam) markMap.set(markDocId(m),m); });
+    (remoteMarks||[]).forEach(m=>{ if(m&&m.studentId&&m.exam) markMap.set(markDocId(m),m); });
+    const mergedMarks=Array.from(markMap.values()).map(({updatedAt,...m})=>m);
+    window.marks=mergedMarks;
+    saveLocal("PG_MARKS",mergedMarks);
+
+    /* Fees: remote receipt wins. */
+    const feeMap=new Map();
+    currentFees().forEach(f=>{ if(f&&f.receipt) feeMap.set(String(f.receipt),f); });
+    (remoteFees||[]).forEach(f=>{ if(f&&f.receipt) feeMap.set(String(f.receipt),f); });
+    const mergedFees=Array.from(feeMap.values()).map(({updatedAt,...f})=>f);
+    window.fees=mergedFees;
+    saveLocal("PG_FEES",mergedFees);
+
+    /* Upload local-only records so another device can see them. */
+    if(remoteAttendance){
+      const remoteDates=new Set(Object.keys(remoteAttendance));
+      for(const [date,records] of Object.entries(localAtt)){
+        if(!remoteDates.has(date)) await saveAttendanceDateToFirebase(date,records);
+      }
     }
 
-    /*
-      पहले आपका existing import चलेगा.
-      इससे आपका existing validation,
-      duplicate checking और UI बना रहेगा.
-    */
+    if(remoteMarks!==null){
+      const remoteMarkIds=new Set((remoteMarks||[]).map(markDocId));
+      await saveAllMarksToFirebase(currentMarks().filter(m=>m&&m.studentId&&m.exam&&!remoteMarkIds.has(markDocId(m))));
+    }
 
-    originalImportBulkStudents();
+    if(remoteFees!==null){
+      const remoteFeeIds=new Set((remoteFees||[]).map(f=>String(f.receipt)));
+      await saveAllFeesToFirebase(currentFees().filter(f=>f&&f.receipt&&!remoteFeeIds.has(String(f.receipt))));
+    }
 
-    /*
-      थोड़ी देर बाद updated students Firebase में जाएंगे.
-    */
+    try{ refreshAll(); }catch(e){}
+    console.log("☁️ Attendance + Marks + Fees online data loaded");
+  }catch(error){
+    console.error("Academic online initialization error:",error);
+  }
+}
 
-    setTimeout(async () => {
+/* =========================================================
+   OVERRIDE ATTENDANCE ACTIONS
+========================================================= */
+const originalSetAtt = window.setAtt;
+window.setAtt = async function(id,status){
+  if(typeof originalSetAtt === "function") originalSetAtt(id,status);
+  const date = document.getElementById("attDate")?.value || new Date().toISOString().slice(0,10);
+  const records = currentAttendance()[date] || {};
+  await saveAttendanceDateToFirebase(date,records);
+};
 
-      try {
+const originalMarkAllAttendance = window.markAllAttendance;
+window.markAllAttendance = async function(status){
+  if(typeof originalMarkAllAttendance === "function") originalMarkAllAttendance(status);
+  const date = document.getElementById("attDate")?.value || new Date().toISOString().slice(0,10);
+  await saveAttendanceDateToFirebase(date,currentAttendance()[date]||{});
+};
 
-        if (
-          window.firebaseStudentAPI &&
-          Array.isArray(students)
-        ) {
+const originalClearAttendance = window.clearAttendance;
+window.clearAttendance = async function(){
+  const date = document.getElementById("attDate")?.value || new Date().toISOString().slice(0,10);
+  if(typeof originalClearAttendance === "function") originalClearAttendance();
+  await deleteAttendanceDateFromFirebase(date);
+};
 
-          await window.firebaseStudentAPI.saveAllStudents(
-            students
-          );
+const originalSaveAttendance = window.saveAttendance;
+window.saveAttendance = async function(){
+  if(typeof originalSaveAttendance === "function") originalSaveAttendance();
+  const date = document.getElementById("attDate")?.value || new Date().toISOString().slice(0,10);
+  await saveAttendanceDateToFirebase(date,currentAttendance()[date]||{});
+  toastSafe("☁️ Attendance online saved");
+};
 
-          console.log(
-            "☁️ Bulk Import Firebase में save हो गया"
-          );
+/* =========================================================
+   OVERRIDE MARKS ACTIONS
+========================================================= */
+const originalSaveMarksForm = window.saveMarksForm;
+window.saveMarksForm = async function(e){
+  if(typeof originalSaveMarksForm === "function") originalSaveMarksForm(e);
+  const studentId=document.getElementById("mStudent")?.value;
+  const exam=document.getElementById("mExam")?.value;
+  if(!studentId || !exam) return;
+  const mark = currentMarks().find(m=>String(m.studentId)===String(studentId)&&String(m.exam)===String(exam));
+  if(mark){
+    await saveMarkToFirebase(mark);
+    toastSafe("☁️ Marks online saved");
+  }
+};
 
-          toast(
-            "☁️ Students Firebase में online save हो गए"
-          );
-        }
+/* =========================================================
+   OVERRIDE FEES ACTIONS
+========================================================= */
+const originalSaveFee = window.saveFee;
+window.saveFee = async function(e){
+  if(typeof originalSaveFee === "function") originalSaveFee(e);
+  const receipt = "RCP" + Date.now().toString().slice(-7);
+  /* The original function generates its own receipt. Find the newest record. */
+  const list=currentFees();
+  const newest=list[list.length-1];
+  if(newest){
+    await saveFeeToFirebase(newest);
+    toastSafe("☁️ Fee payment online saved");
+  }
+};
 
-      } catch (error) {
+const originalDeleteFee = window.deleteFee;
+window.deleteFee = async function(receipt){
+  if(typeof originalDeleteFee === "function") originalDeleteFee(receipt);
+  await deleteFeeFromFirebase(receipt);
+  toastSafe("☁️ Fee record removed online");
+};
 
-        console.error(
-          "Bulk Firebase sync error:",
-          error
-        );
+/* =========================================================
+   STUDENT ACTIONS
+========================================================= */
+const originalSaveStudent = window.saveStudent;
+window.saveStudent = async function(event){
+  if(typeof originalSaveStudent === "function") originalSaveStudent(event);
+  await wait(50);
+  const list=currentStudents();
+  const id=document.getElementById("sId")?.value?.trim();
+  const student=list.find(s=>String(s.id)===String(id));
+  if(student) await saveStudentToFirebase(student);
+};
 
-      }
+const originalDeleteStudent = window.deleteStudent;
+window.deleteStudent = async function(id){
+  if(typeof originalDeleteStudent === "function") originalDeleteStudent(id);
+  await wait(50);
+  await deleteStudentFromFirebase(id);
+};
 
-    }, 300);
+/* =========================================================
+   BULK IMPORT: AFTER EXISTING IMPORT, SYNC ALL STUDENTS
+========================================================= */
+const originalImportBulkStudents = window.importBulkStudents;
+window.importBulkStudents = async function(){
+  if(typeof originalImportBulkStudents === "function") originalImportBulkStudents();
+  await wait(100);
+  await saveAllStudentsToFirebase(currentStudents());
+  toastSafe("☁️ Students Firebase में online saved");
+};
 
-  };
+/* Public API for future buttons/features. */
+window.firebaseAcademicAPI = {
+  saveAttendanceDate:saveAttendanceDateToFirebase,
+  loadAttendance:loadAttendanceFromFirebase,
+  deleteAttendanceDate:deleteAttendanceDateFromFirebase,
+  saveMark:saveMarkToFirebase,
+  saveAllMarks:saveAllMarksToFirebase,
+  loadMarks:loadMarksFromFirebase,
+  deleteMark:deleteMarkFromFirebase,
+  saveFee:saveFeeToFirebase,
+  saveAllFees:saveAllFeesToFirebase,
+  loadFees:loadFeesFromFirebase,
+  deleteFee:deleteFeeFromFirebase,
+  loadOnlineAcademicData
+};
 
-
-  /* =====================================================
-     OVERRIDE DELETE
-  ===================================================== */
-
-  const originalDeleteStudent =
-    window.deleteStudent;
-
-  window.deleteStudent = async function (id) {
-
-    if (
-      typeof originalDeleteStudent !== "function"
-    ) return;
-
-    const oldStudent =
-      students.find(
-        s => String(s.id) === String(id)
-      );
-
-    /*
-      Existing delete confirmation + UI
-    */
-
-    originalDeleteStudent(id);
-
-    /*
-      Firebase से भी delete
-    */
-
-    setTimeout(async () => {
-
-      if (oldStudent) {
-
-        await window.firebaseStudentAPI
-          .deleteStudent(id);
-
-        console.log(
-          "☁️ Student Firebase से delete हो गया:",
-          id
-        );
-      }
-
-    }, 300);
-
-  };
-
-
-  /* =====================================================
-     OVERRIDE SAVE STUDENT
-  ===================================================== */
-
-  const originalSaveStudent =
-    window.saveStudent;
-
-  window.saveStudent = async function (event) {
-
-    if (
-      typeof originalSaveStudent !== "function"
-    ) return;
-
-    /*
-      Existing Add/Edit Student process
-    */
-
-    originalSaveStudent(event);
-
-    /*
-      Updated student list Firebase में sync
-    */
-
-    setTimeout(async () => {
-
-      try {
-
-        if (
-          Array.isArray(students) &&
-          window.firebaseStudentAPI
-        ) {
-
-          await window.firebaseStudentAPI
-            .saveAllStudents(students);
-
-          console.log(
-            "☁️ Student Add/Edit Firebase में save हो गया"
-          );
-
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Student Firebase sync error:",
-          error
-        );
-
-      }
-
-    }, 300);
-
-  };
-
-
-  /* =====================================================
-     START ONLINE DATABASE
-  ===================================================== */
-
-  initializeOnlineStudents();
-
+/* Start online synchronization after the main ERP script is ready. */
+setTimeout(async()=>{
+  await initializeOnlineStudents();
+  await loadOnlineAcademicData();
+},700);
 </script>
-<!-- ================= END FIREBASE STUDENT DATABASE ================= -->
- <!-- =========================================================
+<!-- ================= END FIREBASE ONLINE DATABASE ================= -->
+<!-- =========================================================
      PATANJALI ERP - 752 STUDENT EXCEL IMPORTER
      Excel/XLS/XLSX -> PG_STUDENTS -> Firebase Firestore
      ========================================================= -->
