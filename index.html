@@ -44,8 +44,47 @@ body{background:#f4f6f9;color:#30343b}.topbar{height:65px;background:#b71c1c;col
 <section id="students" class="page"><div class="page-header"><div><h1>Student Management</h1><p>Add, search, edit, view and delete students.</p></div><button class="btn btn-primary admin-only" onclick="openStudentModal()">＋ Add Student</button></div>
 
 <div class="panel"><div class="table-header"><div class="panel-title">Student List</div><div class="search-box"><input id="studentSearch" class="input" placeholder="Search name / ID / class..." oninput="renderStudents()"><select id="studentClassFilter" class="select" onchange="renderStudents()"><option value="">All Classes</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>Student ID</th><th>Name</th><th>Father</th><th>Class</th><th>Section</th><th>Mobile</th><th>Actions</th></tr></thead><tbody id="studentTable"></tbody></table></div></div></section>
-<section id="bulkStudents" class="page"><div class="page-header"><div><h1>Bulk Student Upload</h1><p>Excel / CSV से एक साथ students import करें।</p></div></div><div class="panel bulk-panel"><div class="panel-title">📥 Bulk Student Upload</div><p class="small" style="margin:8px 0 15px">आपकी file में Class को VI, VII, VIII, IX, X, XI, XII और Section A–J रखें। Roll No. की जरूरत नहीं है।</p><div class="bulk-actions"><label class="btn btn-primary admin-only">📂 Select Excel / CSV <input type="file" id="studentBulkFile" accept=".xlsx,.xls,.csv" onchange="previewBulkStudents(event)" hidden></label><button class="btn btn-info admin-only" onclick="downloadStudentTemplate()">⬇ Download Template</button><select id="bulkMode" class="select" style="max-width:190px"><option value="skip">Duplicate ID: Skip</option><option value="update">Duplicate ID: Update</option></select></div><div class="notice" style="margin-top:14px"><b>Columns:</b> Student ID, Name, Father Name, Mother Name, Date of Birth, House, Class, Section, Mobile, Address</div><div class="bulk-paste"><div class="panel-title" style="font-size:15px">📋 Paste Excel Data & Preview</div><p class="small" style="margin-bottom:8px">Excel में header सहित rows copy करके नीचे paste करें। Tab-separated data automatically पढ़ा जाएगा।</p><textarea id="bulkPasteData" class="textarea" placeholder="Student ID	Name	Father Name	Mother Name	Date of Birth	House	Class	Section	Mobile	Address"></textarea><div class="actions" style="margin-top:8px"><button class="btn btn-info admin-only" onclick="previewPastedBulkStudents()">👁 Preview Pasted Data</button><button class="btn btn-secondary admin-only" onclick="clearPastedBulkStudents()">Clear Paste</button></div></div><div id="bulkPreview" class="bulk-preview"></div><div id="bulkImportActions" class="form-actions" style="display:none;margin-top:15px"><button class="btn btn-success admin-only" onclick="importBulkStudents()">✅ Import All Students</button><button class="btn btn-secondary admin-only" onclick="clearBulkPreview()">Clear</button></div></div></section>
-<section id="attendance" class="page"><div class="page-header"><div><h1>Attendance</h1><p>Daily class-wise attendance management.</p></div><button class="btn btn-success admin-only" onclick="saveAttendance()">💾 Save Attendance</button></div><div class="panel"><div class="filters"><div><label class="small">Date</label><input id="attDate" type="date" class="input" onchange="renderAttendance()"></div><div><label class="small">Class</label><select id="attClass" class="select" onchange="renderAttendance()"><option value="">All Classes</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="attSection" class="select" onchange="renderAttendance()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="attSearch" class="input" placeholder="Student name / ID" oninput="renderAttendance()"></div></div><div class="summary"><div class="mini stat-blue">Total<strong id="attTotal">0</strong></div><div class="mini stat-green">Present<strong id="attPresent">0</strong></div><div class="mini stat-red">Absent<strong id="attAbsent">0</strong></div><div class="mini stat-yellow">Leave<strong id="attLeave">0</strong></div></div><div class="actions" style="margin-bottom:15px"><button class="btn btn-success btn-sm" onclick="markAllAttendance('Present')">Mark All Present</button><button class="btn btn-danger btn-sm" onclick="markAllAttendance('Absent')">Mark All Absent</button><button class="btn btn-warning btn-sm" onclick="markAllAttendance('Leave')">Mark All Leave</button><button class="btn btn-secondary btn-sm" onclick="clearAttendance()">Clear</button></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>ID</th><th>Student</th><th>Class</th><th>Section</th><th>Status</th></tr></thead><tbody id="attendanceTable"></tbody></table></div></div></section>
+<section id="bulkStudents" class="page"><div class="page-header"><div><h1>Bulk Student Upload</h1><p>Excel / CSV से एक साथ students import करें।</p></div></div><div class="panel bulk-panel"><div class="panel-title">📥 Bulk Student Upload</div><p class="small" style="margin:8px 0 15px">आपकी file में Class को VI, VII, VIII, IX, X, XI, XII और Section A–J रखें। Roll No. की जरूरत नहीं है।</p><div class="bulk-actions"><label class="btn btn-primary admin-only">📂 Select Excel / CSV <input type="file" id="studentBulkFile" accept=".xlsx,.xls,.csv" onchange="previewBulkStudents(event)" hidden></label><button class="btn btn-info admin-only" onclick="downloadStudentTemplate()">⬇ Download Template</button>
+ <select id="bulkMode" class="select" style="max-width:190px"><input 
+    type="file" 
+    id="schoolExcelFile" 
+    accept=".xls,.xlsx" 
+    style="display:none" 
+    onchange="handleSchoolExcelImport(this)" 
+> 
+ 
+<button 
+    type="button" 
+    onclick="document.getElementById('schoolExcelFile').click()" 
+    style=" 
+        padding:12px 18px; 
+        border:0; 
+        border-radius:10px; 
+        background:#2563eb; 
+        color:white; 
+        font-weight:700; 
+        cursor:pointer; 
+    " 
+> 
+    📊 Import School Student Excel 
+</button> 
+ 
+<script> 
+function handleSchoolExcelImport(input) { 
+ 
+    const file = input.files[0]; 
+ 
+    if (!file) return; 
+ 
+    importSchoolStudentExcel(file); 
+ 
+    input.value = ""; 
+} 
+</script>
+  <option value="skip">Duplicate ID: Skip</option><option value="update">Duplicate ID: Update</option></select></div><div class="notice" style="margin-top:14px"><b>Columns:</b> Student ID, Name, Father Name, Mother Name, Date of Birth, House, Class, Section, Mobile, Address</div><div class="bulk-paste"><div class="panel-title" style="font-size:15px">📋 Paste Excel Data & Preview</div><p class="small" style="margin-bottom:8px">Excel में header सहित rows copy करके नीचे paste करें। Tab-separated data automatically पढ़ा जाएगा।</p><textarea id="bulkPasteData" class="textarea" placeholder="Student ID	Name	Father Name	Mother Name	Date of Birth	House	Class	Section	Mobile	Address"></textarea><div class="actions" style="margin-top:8px"><button class="btn btn-info admin-only" onclick="previewPastedBulkStudents()">👁 Preview Pasted Data</button><button class="btn btn-secondary admin-only" onclick="clearPastedBulkStudents()">Clear Paste</button></div></div><div id="bulkPreview" class="bulk-preview"></div><div id="bulkImportActions" class="form-actions" style="display:none;margin-top:15px"><button class="btn btn-success admin-only" onclick="importBulkStudents()">✅ Import All Students</button><button class="btn btn-secondary admin-only" onclick="clearBulkPreview()">Clear</button></div></div></section>
+<section id="attendance" class="page"><div class="page-header">
+ <div><h1>Attendance</h1><p>Daily class-wise attendance management.</p></div>
+ <button class="btn btn-success admin-only" onclick="saveAttendance()">💾 Save Attendance</button></div><div class="panel"><div class="filters"><div><label class="small">Date</label><input id="attDate" type="date" class="input" onchange="renderAttendance()"></div><div><label class="small">Class</label><select id="attClass" class="select" onchange="renderAttendance()"><option value="">All Classes</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="attSection" class="select" onchange="renderAttendance()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="attSearch" class="input" placeholder="Student name / ID" oninput="renderAttendance()"></div></div><div class="summary"><div class="mini stat-blue">Total<strong id="attTotal">0</strong></div><div class="mini stat-green">Present<strong id="attPresent">0</strong></div><div class="mini stat-red">Absent<strong id="attAbsent">0</strong></div><div class="mini stat-yellow">Leave<strong id="attLeave">0</strong></div></div><div class="actions" style="margin-bottom:15px"><button class="btn btn-success btn-sm" onclick="markAllAttendance('Present')">Mark All Present</button><button class="btn btn-danger btn-sm" onclick="markAllAttendance('Absent')">Mark All Absent</button><button class="btn btn-warning btn-sm" onclick="markAllAttendance('Leave')">Mark All Leave</button><button class="btn btn-secondary btn-sm" onclick="clearAttendance()">Clear</button></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>ID</th><th>Student</th><th>Class</th><th>Section</th><th>Status</th></tr></thead><tbody id="attendanceTable"></tbody></table></div></div></section>
 <section id="marks" class="page"><div class="page-header"><div><h1>Marks & Results</h1><p>Subject-wise marks entry and result calculation.</p></div><div class="actions"><button class="btn btn-primary admin-only" onclick="openMarksModal()">＋ Enter / Edit Marks</button><button class="btn btn-success admin-only" onclick="saveMarks()">💾 Save</button></div></div><div class="panel"><div class="filters"><div><label class="small">Exam</label><select id="markExam" class="select" onchange="renderMarks()"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div><label class="small">Class</label><select id="markClass" class="select" onchange="renderMarks()"><option value="">All Classes</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="markSection" class="select" onchange="renderMarks()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="markSearch" class="input" placeholder="Student name / ID" oninput="renderMarks()"></div></div><div class="table-box"><table><thead><tr><th>Student</th><th>Class</th><th>English</th><th>Maths</th><th>Science</th><th>Sanskrit</th><th>Social Sci.</th><th>Total</th><th>%</th><th>Grade</th><th>Action</th></tr></thead><tbody id="marksTable"></tbody></table></div></div></section>
 <section id="fees" class="page"><div class="page-header"><div><h1>Fees Management</h1><p>Fee records, payment status and collection tracking.</p></div><button class="btn btn-primary" onclick="openFeeModal()">＋ Record Payment</button></div><div class="cards"><div class="card"><div class="card-title">Total Demand</div><div class="card-number" id="feeDemand">₹0</div></div><div class="card"><div class="card-title">Collected</div><div class="card-number" id="feeCollected">₹0</div></div><div class="card"><div class="card-title">Pending</div><div class="card-number" id="feePending">₹0</div></div><div class="card"><div class="card-title">Records</div><div class="card-number" id="feeRecords">0</div></div></div><div class="panel"><div class="table-header"><div class="panel-title">Fee Records</div><div class="search-box"><input id="feeSearch" class="input" placeholder="Search student..." oninput="renderFees()"></div></div><div class="table-box"><table><thead><tr><th>Receipt</th><th>Student</th><th>Class</th><th>Fee Head</th><th>Demand</th><th>Paid</th><th>Pending</th><th>Status</th><th>Date</th><th>Action</th></tr></thead><tbody id="feeTable"></tbody></table></div></div></section>
 <section id="reports" class="page"><div class="page-header"><div><h1>Reports</h1><p>Frontend reports generated from saved browser data.</p></div><div class="report-actions"><button class="btn btn-info" onclick="printReport('student')">🖨 Student Report</button><button class="btn btn-success" onclick="printReport('attendance')">🖨 Attendance Report</button><button class="btn btn-primary" onclick="printReport('marks')">🖨 Result Report</button><button class="btn btn-warning" onclick="printReport('fees')">🖨 Fee Report</button></div></div><div class="cards"><div class="card"><div class="card-title">Students</div><div class="card-number" id="rStudents">0</div></div><div class="card"><div class="card-title">Attendance %</div><div class="card-number" id="rAttendance">0%</div></div><div class="card"><div class="card-title">Average Result</div><div class="card-number" id="rMarks">0%</div></div><div class="card"><div class="card-title">Fee Pending</div><div class="card-number" id="rPending">₹0</div></div></div><div class="grid-2"><div class="panel"><div class="panel-title">Class-wise Students</div><div id="classReport"></div></div><div class="panel"><div class="panel-title">Academic Summary</div><div id="academicReport"></div></div></div></section>
@@ -648,4 +687,585 @@ refreshAll();loadSettings();
 
 </script>
 <!-- ================= END FIREBASE STUDENT DATABASE ================= -->
+ <!-- =========================================================
+     PATANJALI ERP - 752 STUDENT EXCEL IMPORTER
+     Excel/XLS/XLSX -> PG_STUDENTS -> Firebase Firestore
+     ========================================================= -->
+
+<!-- SheetJS -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+(function () {
+
+    console.log("📚 Advanced Excel Student Importer Loaded");
+
+    // ---------------------------------------------------------
+    // Excel file importer
+    // ---------------------------------------------------------
+    window.importSchoolStudentExcel = async function (file) {
+
+        if (!file) {
+            alert("कृपया Excel file select करें।");
+            return;
+        }
+
+        if (!window.XLSX) {
+            alert("Excel library load नहीं हुई। Internet connection check करें।");
+            return;
+        }
+
+        try {
+
+            console.log("📂 Reading Excel:", file.name);
+
+            const buffer = await file.arrayBuffer();
+
+            const workbook = XLSX.read(buffer, {
+                type: "array",
+                cellDates: true
+            });
+
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+
+            const rows = XLSX.utils.sheet_to_json(sheet, {
+                header: 1,
+                defval: ""
+            });
+
+            console.log("📊 Total Excel rows:", rows.length);
+
+            // -------------------------------------------------
+            // Find actual header row
+            // -------------------------------------------------
+            let headerIndex = -1;
+
+            for (let i = 0; i < rows.length; i++) {
+
+                const row = rows[i].map(x =>
+                    String(x).trim().toLowerCase()
+                );
+
+                if (
+                    row.includes("admission no.") &&
+                    row.includes("student name") &&
+                    row.includes("class") &&
+                    row.includes("section")
+                ) {
+                    headerIndex = i;
+                    break;
+                }
+            }
+
+            if (headerIndex === -1) {
+                alert(
+                    "Excel में Student Profile Detail Report का header नहीं मिला।"
+                );
+                return;
+            }
+
+            console.log("✅ Header row:", headerIndex);
+
+            const headers = rows[headerIndex].map(x =>
+                String(x).trim()
+            );
+
+            // -------------------------------------------------
+            // Header finder
+            // -------------------------------------------------
+            function findHeader(name) {
+
+                const index = headers.findIndex(h =>
+                    String(h).trim().toLowerCase() ===
+                    String(name).trim().toLowerCase()
+                );
+
+                return index;
+            }
+
+            const col = {
+                sr: findHeader("Sr. No."),
+                academicYear: findHeader("Academic Year"),
+                admission: findHeader("Admission No."),
+                name: findHeader("Student Name"),
+                className: findHeader("Class"),
+                section: findHeader("Section"),
+                father: findHeader("Father Name"),
+                mother: findHeader("Mother Name"),
+                address: findHeader("Address"),
+                dob: findHeader("Date of Birth"),
+                mobile: findHeader("Mobile Number"),
+                studentType: findHeader("Student Type"),
+                house: findHeader("House")
+            };
+
+            console.log("🧾 Column mapping:", col);
+
+            // -------------------------------------------------
+            // Helper
+            // -------------------------------------------------
+            function value(row, index) {
+
+                if (index === -1 || index == null) {
+                    return "";
+                }
+
+                return String(row[index] ?? "").trim();
+            }
+
+            function cleanClass(value) {
+
+                let v = String(value || "").trim();
+
+                // Examples:
+                // XII
+                // Class XII
+                // 12
+
+                v = v.replace(/^class\s*/i, "");
+
+                const map = {
+                    "1": "I",
+                    "2": "II",
+                    "3": "III",
+                    "4": "IV",
+                    "5": "V",
+                    "6": "VI",
+                    "7": "VII",
+                    "8": "VIII",
+                    "9": "IX",
+                    "10": "X",
+                    "11": "XI",
+                    "12": "XII"
+                };
+
+                if (map[v]) {
+                    return map[v];
+                }
+
+                return v;
+            }
+
+            function cleanSection(value) {
+
+                let v = String(value || "").trim();
+
+                /*
+                    A (HUMANITIES)
+                    B (SCIENCE)
+                    C
+                */
+
+                const match = v.match(/^([A-Z]+)/i);
+
+                if (match) {
+                    return match[1].toUpperCase();
+                }
+
+                return v;
+            }
+
+            function cleanDate(value) {
+
+                if (!value) return "";
+
+                if (value instanceof Date && !isNaN(value)) {
+
+                    const y = value.getFullYear();
+                    const m = String(value.getMonth() + 1).padStart(2, "0");
+                    const d = String(value.getDate()).padStart(2, "0");
+
+                    return `${y}-${m}-${d}`;
+                }
+
+                return String(value).trim();
+            }
+
+            // -------------------------------------------------
+            // Convert Excel -> ERP student objects
+            // -------------------------------------------------
+            const importedStudents = [];
+
+            const usedIds = new Set();
+
+            for (let i = headerIndex + 1; i < rows.length; i++) {
+
+                const row = rows[i];
+
+                const admission = value(row, col.admission);
+                const name = value(row, col.name);
+
+                // Empty row
+                if (!name) {
+                    continue;
+                }
+
+                /*
+                    Admission number को primary ERP ID बनाया जा रहा है।
+                    Prefix लगाने से existing ERP IDs से collision कम होगी।
+                */
+
+                let id = admission
+                    ? "PG" + admission.replace(/[^A-Za-z0-9]/g, "")
+                    : "PG" + Date.now() + i;
+
+                let originalId = id;
+                let counter = 2;
+
+                while (usedIds.has(id)) {
+                    id = originalId + "_" + counter;
+                    counter++;
+                }
+
+                usedIds.add(id);
+
+                const className = cleanClass(
+                    value(row, col.className)
+                );
+
+                const sectionRaw = value(
+                    row,
+                    col.section
+                );
+
+                const section = cleanSection(sectionRaw);
+
+                const student = {
+
+                    id: id,
+
+                    admissionNo: admission,
+
+                    name: name,
+
+                    father: value(
+                        row,
+                        col.father
+                    ),
+
+                    mother: value(
+                        row,
+                        col.mother
+                    ),
+
+                    dob: cleanDate(
+                        row[col.dob]
+                    ),
+
+                    house: value(
+                        row,
+                        col.house
+                    ),
+
+                    className: className,
+
+                    section: section,
+
+                    sectionRaw: sectionRaw,
+
+                    mobile: value(
+                        row,
+                        col.mobile
+                    ),
+
+                    address: value(
+                        row,
+                        col.address
+                    ),
+
+                    academicYear: value(
+                        row,
+                        col.academicYear
+                    ),
+
+                    studentType: value(
+                        row,
+                        col.studentType
+                    ),
+
+                    password: "1234",
+
+                    status: "Active"
+
+                };
+
+                importedStudents.push(student);
+            }
+
+            console.log(
+                "👨‍🎓 Students detected:",
+                importedStudents.length
+            );
+
+            if (!importedStudents.length) {
+
+                alert(
+                    "Excel से कोई student record नहीं मिला।"
+                );
+
+                return;
+            }
+
+            // -------------------------------------------------
+            // Preview
+            // -------------------------------------------------
+            const first = importedStudents[0];
+
+            const message =
+                "Excel Import Ready\n\n" +
+
+                "File: " + file.name + "\n" +
+
+                "Students found: " +
+                importedStudents.length +
+                "\n\n" +
+
+                "First Student:\n" +
+
+                "Name: " + first.name + "\n" +
+
+                "Admission: " +
+                first.admissionNo +
+                "\n" +
+
+                "Class: " +
+                first.className +
+                "\n" +
+
+                "Section: " +
+                first.section +
+                "\n\n" +
+
+                "क्या इन students को ERP में import करना है?";
+
+            if (!confirm(message)) {
+                console.log("❌ Import cancelled");
+                return;
+            }
+
+            // -------------------------------------------------
+            // Existing students
+            // -------------------------------------------------
+            let existing = [];
+
+            try {
+
+                const saved =
+                    localStorage.getItem("PG_STUDENTS");
+
+                if (saved) {
+                    existing = JSON.parse(saved);
+                }
+
+            } catch (e) {
+
+                console.warn(
+                    "Existing student data read error:",
+                    e
+                );
+
+                existing = [];
+            }
+
+            if (!Array.isArray(existing)) {
+                existing = [];
+            }
+
+            // -------------------------------------------------
+            // Merge
+            // -------------------------------------------------
+            const studentMap = new Map();
+
+            existing.forEach(student => {
+
+                if (
+                    student &&
+                    student.id
+                ) {
+
+                    studentMap.set(
+                        String(student.id).toUpperCase(),
+                        student
+                    );
+
+                }
+
+            });
+
+            let added = 0;
+            let updated = 0;
+
+            importedStudents.forEach(student => {
+
+                const key =
+                    String(student.id).toUpperCase();
+
+                if (studentMap.has(key)) {
+
+                    const old =
+                        studentMap.get(key);
+
+                    studentMap.set(
+                        key,
+                        {
+                            ...old,
+                            ...student
+                        }
+                    );
+
+                    updated++;
+
+                } else {
+
+                    studentMap.set(
+                        key,
+                        student
+                    );
+
+                    added++;
+                }
+
+            });
+
+            const finalStudents =
+                Array.from(studentMap.values());
+
+            // -------------------------------------------------
+            // Save localStorage
+            // -------------------------------------------------
+            localStorage.setItem(
+                "PG_STUDENTS",
+                JSON.stringify(finalStudents)
+            );
+
+            console.log(
+                "💾 PG_STUDENTS saved:",
+                finalStudents.length
+            );
+
+            // -------------------------------------------------
+            // Firebase sync
+            // -------------------------------------------------
+            if (
+                window.firebaseStudentAPI &&
+                typeof window.firebaseStudentAPI
+                    .saveAllStudentsToFirebase === "function"
+            ) {
+
+                console.log(
+                    "☁️ Uploading students to Firebase..."
+                );
+
+                await window.firebaseStudentAPI
+                    .saveAllStudentsToFirebase(
+                        importedStudents
+                    );
+
+                console.log(
+                    "✅ Firebase upload completed"
+                );
+
+            } else {
+
+                console.warn(
+                    "⚠️ Firebase Student API not available."
+                );
+
+            }
+
+            // -------------------------------------------------
+            // Update global students variable
+            // -------------------------------------------------
+            if (
+                typeof window.students !== "undefined"
+            ) {
+
+                window.students = finalStudents;
+
+            }
+
+            try {
+
+                if (
+                    typeof renderStudents ===
+                    "function"
+                ) {
+                    renderStudents();
+                }
+
+                if (
+                    typeof refreshAll ===
+                    "function"
+                ) {
+                    refreshAll();
+                }
+
+            } catch (e) {
+
+                console.warn(
+                    "UI refresh warning:",
+                    e
+                );
+
+            }
+
+            // -------------------------------------------------
+            // Result
+            // -------------------------------------------------
+            alert(
+                "✅ Student Import Complete!\n\n" +
+
+                "Excel Students: " +
+                importedStudents.length +
+                "\n\n" +
+
+                "New Added: " +
+                added +
+                "\n" +
+
+                "Updated: " +
+                updated +
+                "\n\n" +
+
+                "Total ERP Students: " +
+                finalStudents.length +
+                "\n\n" +
+
+                "Firebase Sync: " +
+                (
+                    window.firebaseStudentAPI
+                        ? "Completed"
+                        : "Not Connected"
+                )
+            );
+
+            console.log(
+                "🎉 IMPORT COMPLETE",
+                {
+                    excel: importedStudents.length,
+                    added,
+                    updated,
+                    total: finalStudents.length
+                }
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ Excel Import Error:",
+                error
+            );
+
+            alert(
+                "Excel Import में error आया:\n\n" +
+                error.message
+            );
+
+        }
+
+    };
+
+})();
+</script>
 </body></html>
