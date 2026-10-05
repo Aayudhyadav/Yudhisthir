@@ -45,43 +45,24 @@ body{background:#f4f6f9;color:#30343b}.topbar{height:65px;background:#b71c1c;col
 
 <div class="panel"><div class="table-header"><div class="panel-title">Student List</div><div class="search-box"><input id="studentSearch" class="input" placeholder="Search name / ID / class..." oninput="renderStudents()"><select id="studentClassFilter" class="select" onchange="renderStudents()"><option value="">All Classes</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>Student ID</th><th>Name</th><th>Father</th><th>Class</th><th>Section</th><th>Mobile</th><th>Actions</th></tr></thead><tbody id="studentTable"></tbody></table></div></div></section>
 <section id="bulkStudents" class="page"><div class="page-header"><div><h1>Bulk Student Upload</h1><p>Excel / CSV से एक साथ students import करें।</p></div></div><div class="panel bulk-panel"><div class="panel-title">📥 Bulk Student Upload</div><p class="small" style="margin:8px 0 15px">आपकी file में Class को VI, VII, VIII, IX, X, XI, XII और Section A–J रखें। Roll No. की जरूरत नहीं है।</p><div class="bulk-actions"><label class="btn btn-primary admin-only">📂 Select Excel / CSV <input type="file" id="studentBulkFile" accept=".xlsx,.xls,.csv" onchange="previewBulkStudents(event)" hidden></label><button class="btn btn-info admin-only" onclick="downloadStudentTemplate()">⬇ Download Template</button>
- <select id="bulkMode" class="select" style="max-width:190px"><input 
-    type="file" 
-    id="schoolExcelFile" 
-    accept=".xls,.xlsx" 
-    style="display:none" 
-    onchange="handleSchoolExcelImport(this)" 
-> 
- 
-<button 
-    type="button" 
-    onclick="document.getElementById('schoolExcelFile').click()" 
-    style=" 
-        padding:12px 18px; 
-        border:0; 
-        border-radius:10px; 
-        background:#2563eb; 
-        color:white; 
-        font-weight:700; 
-        cursor:pointer; 
-    " 
-> 
-    📊 Import School Student Excel 
-</button> 
- 
-<script> 
-function handleSchoolExcelImport(input) { 
- 
-    const file = input.files[0]; 
- 
-    if (!file) return; 
- 
-    importSchoolStudentExcel(file); 
- 
-    input.value = ""; 
-} 
-</script>
-  <option value="skip">Duplicate ID: Skip</option><option value="update">Duplicate ID: Update</option></select></div><div class="notice" style="margin-top:14px"><b>Columns:</b> Student ID, Name, Father Name, Mother Name, Date of Birth, House, Class, Section, Mobile, Address</div><div class="bulk-paste"><div class="panel-title" style="font-size:15px">📋 Paste Excel Data & Preview</div><p class="small" style="margin-bottom:8px">Excel में header सहित rows copy करके नीचे paste करें। Tab-separated data automatically पढ़ा जाएगा।</p><textarea id="bulkPasteData" class="textarea" placeholder="Student ID	Name	Father Name	Mother Name	Date of Birth	House	Class	Section	Mobile	Address"></textarea><div class="actions" style="margin-top:8px"><button class="btn btn-info admin-only" onclick="previewPastedBulkStudents()">👁 Preview Pasted Data</button><button class="btn btn-secondary admin-only" onclick="clearPastedBulkStudents()">Clear Paste</button></div></div><div id="bulkPreview" class="bulk-preview"></div><div id="bulkImportActions" class="form-actions" style="display:none;margin-top:15px"><button class="btn btn-success admin-only" onclick="importBulkStudents()">✅ Import All Students</button><button class="btn btn-secondary admin-only" onclick="clearBulkPreview()">Clear</button></div></div></section>
+ <select id="bulkMode" class="select" style="max-width:190px">
+  <option value="skip">Duplicate ID: Skip</option>
+  <option value="update">Duplicate ID: Update</option>
+</select>
+<input type="file" id="schoolExcelFile" accept=".xls,.xlsx" style="display:none" onchange="handleSchoolExcelImport(this)">
+<button type="button" class="btn btn-primary admin-only" onclick="document.getElementById('schoolExcelFile').click()">📊 Import School Student Excel</button>
+<script>
+function handleSchoolExcelImport(input) {
+  const file = input && input.files ? input.files[0] : null;
+  if (!file) return;
+  if (typeof importSchoolStudentExcel === 'function') {
+    importSchoolStudentExcel(file);
+  } else {
+    alert('Excel importer अभी load नहीं हुआ। Page को refresh करें।');
+  }
+  input.value = '';
+}
+</script></div><div class="notice" style="margin-top:14px"><b>Columns:</b> Student ID, Name, Father Name, Mother Name, Date of Birth, House, Class, Section, Mobile, Address</div><div class="bulk-paste"><div class="panel-title" style="font-size:15px">📋 Paste Excel Data & Preview</div><p class="small" style="margin-bottom:8px">Excel में header सहित rows copy करके नीचे paste करें। Tab-separated data automatically पढ़ा जाएगा।</p><textarea id="bulkPasteData" class="textarea" placeholder="Student ID	Name	Father Name	Mother Name	Date of Birth	House	Class	Section	Mobile	Address"></textarea><div class="actions" style="margin-top:8px"><button class="btn btn-info admin-only" onclick="previewPastedBulkStudents()">👁 Preview Pasted Data</button><button class="btn btn-secondary admin-only" onclick="clearPastedBulkStudents()">Clear Paste</button></div></div><div id="bulkPreview" class="bulk-preview"></div><div id="bulkImportActions" class="form-actions" style="display:none;margin-top:15px"><button class="btn btn-success admin-only" onclick="importBulkStudents()">✅ Import All Students</button><button class="btn btn-secondary admin-only" onclick="clearBulkPreview()">Clear</button></div></div></section>
 <section id="attendance" class="page"><div class="page-header">
  <div><h1>Attendance</h1><p>Daily class-wise attendance management.</p></div>
  <button class="btn btn-success admin-only" onclick="saveAttendance()">💾 Save Attendance</button></div><div class="panel"><div class="filters"><div><label class="small">Date</label><input id="attDate" type="date" class="input" onchange="renderAttendance()"></div><div><label class="small">Class</label><select id="attClass" class="select" onchange="renderAttendance()"><option value="">All Classes</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="attSection" class="select" onchange="renderAttendance()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="attSearch" class="input" placeholder="Student name / ID" oninput="renderAttendance()"></div></div><div class="summary"><div class="mini stat-blue">Total<strong id="attTotal">0</strong></div><div class="mini stat-green">Present<strong id="attPresent">0</strong></div><div class="mini stat-red">Absent<strong id="attAbsent">0</strong></div><div class="mini stat-yellow">Leave<strong id="attLeave">0</strong></div></div><div class="actions" style="margin-bottom:15px"><button class="btn btn-success btn-sm" onclick="markAllAttendance('Present')">Mark All Present</button><button class="btn btn-danger btn-sm" onclick="markAllAttendance('Absent')">Mark All Absent</button><button class="btn btn-warning btn-sm" onclick="markAllAttendance('Leave')">Mark All Leave</button><button class="btn btn-secondary btn-sm" onclick="clearAttendance()">Clear</button></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>ID</th><th>Student</th><th>Class</th><th>Section</th><th>Status</th></tr></thead><tbody id="attendanceTable"></tbody></table></div></div></section>
