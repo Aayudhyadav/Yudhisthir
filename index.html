@@ -162,6 +162,7 @@ function deleteFee(r){if(!requireAdmin())return;fees=fees.filter(f=>f.receipt!==
 function renderReports(){let visible=getVisibleStudents(),visibleIds=new Set(visible.map(s=>s.id));document.getElementById('rStudents').textContent=visible.length;let statuses=currentRole==='student'?Object.values(attendance).flatMap(x=>Object.entries(x).filter(([id])=>visibleIds.has(id)).map(([,st])=>st)):Object.values(attendance).flatMap(x=>Object.values(x)),p=statuses.filter(x=>x==='Present').length;document.getElementById('rAttendance').textContent=(statuses.length?(p/statuses.length*100):0).toFixed(1)+'%';let av=marks.filter(m=>visibleIds.has(m.studentId)).map(calcMark);document.getElementById('rMarks').textContent=(av.length?av.reduce((a,x)=>a+x.pct,0)/av.length:0).toFixed(1)+'%';let pending=fees.filter(f=>visibleIds.has(f.studentId)).reduce((a,f)=>a+Math.max(0,f.demand-f.paid),0);document.getElementById('rPending').textContent='₹'+pending;let cls={};visible.forEach(s=>cls[s.className]=(cls[s.className]||0)+1);document.getElementById('classReport').innerHTML=Object.keys(cls).sort((a,b)=>a-b).map(c=>`<p style="margin:10px 0">Class ${c}: <b>${cls[c]}</b> students</p>`).join('')||'<div class="empty">No data</div>';let grades={};av.forEach(x=>grades[x.grade]=(grades[x.grade]||0)+1);document.getElementById('academicReport').innerHTML=Object.keys(grades).map(g=>`<p style="margin:10px 0">Grade ${g}: <b>${grades[g]}</b> record(s)</p>`).join('')||'<div class="empty">No marks data</div>'}
 function printReport(type){let title={student:'Student Report',attendance:'Attendance Report',marks:'Result Report',fees:'Fee Report'}[type],body='';if(type==='student')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Roll No</th><th>ID</th><th>Name</th><th>Class</th><th>Section</th><th>Mobile</th></tr>'+students.map(s=>`<tr><td>${s.rollNo||''}</td><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${s.section}</td><td>${s.mobile||''}</td></tr>`).join('')+'</table>';if(type==='marks')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Student</th><th>Exam</th><th>Total</th><th>%</th><th>Grade</th></tr>'+marks.map(m=>{let s=visible.find(x=>x.id===m.studentId),x=calcMark(m);return `<tr><td>${s?.name||m.studentId}</td><td>${m.exam}</td><td>${x.total}/500</td><td>${x.pct.toFixed(1)}%</td><td>${x.grade}</td></tr>`}).join('')+'</table>';if(type==='attendance')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Date</th><th>Student</th><th>Status</th></tr>'+Object.entries(attendance).flatMap(([date,d])=>Object.entries(d).map(([id,st])=>`<tr><td>${date}</td><td>${visible.find(s=>s.id===id)?.name||id}</td><td>${st}</td></tr>`)).join('')+'</table>';if(type==='fees')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Receipt</th><th>Student</th><th>Head</th><th>Demand</th><th>Paid</th><th>Pending</th></tr>'+fees.map(f=>`<tr><td>${f.receipt}</td><td>${visible.find(s=>s.id===f.studentId)?.name||f.studentId}</td><td>${f.head}</td><td>₹${f.demand}</td><td>₹${f.paid}</td><td>₹${Math.max(0,f.demand-f.paid)}</td></tr>`).join('')+'</table>';let w=window.open('','_blank');w.document.write(`<html><head><title>${title}</title><style>body{font-family:Arial;padding:30px}h1{color:#b71c1c}table{border-collapse:collapse;margin-top:20px}th{background:#eee}</style></head><body><h1>Patanjali Gurukulam</h1><h2>${title}</h2><p>Generated: ${new Date().toLocaleString()}</p>${body}
 
+
 </body></html>`);w.document.close();w.print()}
 function renderLoginCredentials(){if(currentRole!=='admin')return;document.getElementById('authAdminId').value=auth.adminId||'admin';document.getElementById('authAdminPassword').value=auth.adminPassword||'1234';document.getElementById('studentLoginTable').innerHTML=students.map((s,i)=>`<tr><td><input class="input" id="loginId_${i}" value="${escapeHtml(s.id||'')}" style="min-width:150px"></td><td>${escapeHtml(s.name||'')}</td><td>${escapeHtml(s.id||'')}</td><td><input class="input" id="loginPw_${i}" type="text" value="${escapeHtml(s.password||'1234')}" style="min-width:120px"></td><td><button class="btn btn-success btn-sm" onclick="saveStudentLogin(${i})">Save</button></td></tr>`).join('')||`<tr><td colspan="5" class="empty">No students found.</td></tr>`;}
 function saveAdminCredentials(){if(!requireAdmin())return;let id=document.getElementById('authAdminId').value.trim(),pw=document.getElementById('authAdminPassword').value;if(!id||!pw){toast('Admin ID और password required');return}auth={adminId:id,adminPassword:pw};save('PG_AUTH',auth);toast('Admin login updated')}
@@ -1639,6 +1640,211 @@ if(await waitForFirebase()){
 
   document.addEventListener('change',e=>{if(['uploadMarkClass','uploadMarkSubject','uploadMarkExam','uploadMarkMax'].includes(e.target?.id)&&markRows.length)renderMarksheetTable();});
   setTimeout(()=>{initUploadMarksPage();},1000);
+})();
+
+</script>
+<script>
+/* =========================================================
+   PATANJALI ERP FINAL REQUESTED UPGRADE
+   - masked message names + Name/ID selector
+   - student read-only UI
+   - multi-subject checkbox marks upload
+   - A4 two-sided marksheet like supplied reference
+   - compact student row + photo + DOB
+   - multiple admin users + broadcast to all students
+========================================================= */
+(function(){
+  const SUBJECTS = window.PG_SUBJECTS || [
+    ['Math','math'],['English','english'],['Science','science'],['Social Science','socialScience'],['Hindi','hindi'],['Sanskrit','sanskrit'],['Sanskrit Sahitya','sanskritSahitya'],['Sanskrit Vyakaran','sanskritVyakaran'],['Shastra','shastra'],['Web Application','webApplication'],['Political Science','politicalScience'],['History','history'],['Economics','economics'],['Yoga','yoga'],['Physical Education','physicalEducation'],['Music','music'],['IT','it']
+  ];
+  const CLASSES=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+  const RECOMMENDED={I:5,II:5,III:5,IV:5,V:5,VI:6,VII:7,VIII:8,IX:8,X:8,XI:6,XII:6};
+  let pgMarkRows=[];
+  let pgChatTarget={role:'admin',id:'admin',name:'Administrator'};
+  let pgBroadcast=false;
+  const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const toastMsg=m=>{try{toast(m)}catch(e){alert(m)}};
+  const getStudents=()=>Array.isArray(window.students)?window.students:[];
+  const getMarks=()=>Array.isArray(window.marks)?window.marks:[];
+  const role=()=>window.currentRole||'';
+  const me=()=>window.currentStudentId||'';
+  const keyFor=(name)=>SUBJECTS.find(x=>x[0]===name)?.[1]||name.replace(/[^a-z0-9]/gi,'').toLowerCase();
+  const labelFor=k=>SUBJECTS.find(x=>x[1]===k)?.[0]||k;
+  const getMark=(m,k)=>+(m?.[k]??(k==='math'?m?.maths:k==='socialScience'?m?.social:0)??0)||0;
+  const getMax=(m,k,def=100)=>+(m?.['maxMarks_'+k]??def)||def;
+  const grade=p=>p>=90?'A+':p>=80?'A':p>=70?'B+':p>=60?'B':p>=50?'C':p>=33?'D':'F';
+  const maskedName=name=>{const a=String(name||'Student').trim().split(/\s+/).filter(Boolean);if(a.length===1)return a[0].slice(0,1)+'•••';return a[0]+' '+a[a.length-1].slice(0,1)+'.'};
+
+  /* ---------- Student photo / compact student profile ---------- */
+  window.previewStudentPhoto=function(e){
+    const f=e.target?.files?.[0]; if(!f)return;
+    if(f.size>3*1024*1024){toastMsg('Student photo maximum 3 MB रखें।');e.target.value='';return;}
+    if(!f.type.startsWith('image/')){toastMsg('केवल image photo upload करें।');e.target.value='';return;}
+    const rd=new FileReader();rd.onload=()=>{const img=document.getElementById('sPhotoPreview');if(img)img.src=rd.result;img?.setAttribute('data-photo',rd.result)};rd.readAsDataURL(f);
+  };
+  window.openStudentModal=function(id=''){
+    if(typeof requireAdmin==='function'&&!requireAdmin())return;
+    const s=getStudents().find(x=>String(x.id)===String(id));
+    document.getElementById('studentModalTitle').textContent=id?'Edit Student':'Add Student';
+    document.getElementById('editStudentId').value=id||'';
+    document.getElementById('sId').value=s?.id||'PG'+new Date().getFullYear()+String(Date.now()).slice(-5);
+    document.getElementById('sName').value=s?.name||'';document.getElementById('sFather').value=s?.father||'';document.getElementById('sMother').value=s?.mother||'';
+    document.getElementById('sDob').value=s?.dob||'';document.getElementById('sHouse').value=s?.house||'';document.getElementById('sClass').value=s?.className||'';document.getElementById('sSection').value=s?.section||'';document.getElementById('sMobile').value=s?.mobile||'';document.getElementById('sAddress').value=s?.address||'';
+    const prev=document.getElementById('sPhotoPreview');if(prev){prev.src=s?.photo||'';prev.removeAttribute('data-photo');}
+    const fi=document.getElementById('sPhoto');if(fi)fi.value='';openModal('studentModal');
+  };
+  window.saveStudent=function(e){
+    if(typeof requireAdmin==='function'&&!requireAdmin())return;e.preventDefault();
+    const old=document.getElementById('editStudentId').value.trim();const arr=getStudents();const existing=arr.find(x=>String(x.id)===String(old));
+    const prev=document.getElementById('sPhotoPreview');const photo=prev?.getAttribute('data-photo')||existing?.photo||'';
+    const s={password:existing?.password||'1234',id:document.getElementById('sId').value.trim(),name:document.getElementById('sName').value.trim(),father:document.getElementById('sFather').value.trim(),mother:document.getElementById('sMother').value.trim(),dob:document.getElementById('sDob').value,photo,house:document.getElementById('sHouse').value.trim(),className:document.getElementById('sClass').value,section:document.getElementById('sSection').value,mobile:document.getElementById('sMobile').value.trim(),address:document.getElementById('sAddress').value.trim()};
+    if(!s.id||!s.name||!s.className||!s.section){toastMsg('Student ID, Name, Class और Section required हैं।');return;}
+    if(old){const i=arr.findIndex(x=>String(x.id)===String(old));if(i>=0)arr[i]=s;}else{if(arr.some(x=>String(x.id).toLowerCase()===s.id.toLowerCase())){toastMsg('Student ID already exists');return;}arr.push(s)}
+    window.students=arr;localStorage.setItem('PG_STUDENTS',JSON.stringify(arr));
+    try{window.firebaseStudentAPI?.saveStudent?.(s)}catch(err){console.warn(err)}
+    closeModal('studentModal');renderStudents();if(typeof refreshAll==='function')refreshAll();toastMsg('Student saved successfully');
+  };
+  window.renderStudents=function(){
+    const q=(document.getElementById('studentSearch')?.value||'').toLowerCase(),c=document.getElementById('studentClassFilter')?.value||'';
+    const visible=typeof getVisibleStudents==='function'?getVisibleStudents():getStudents();
+    const arr=visible.filter(s=>(!q||[s.id,s.name,s.father,s.className,s.section].join(' ').toLowerCase().includes(q))&&(!c||s.className===c));
+    const body=document.getElementById('studentTable');if(!body)return;
+    body.innerHTML=arr.length?arr.map((s,i)=>`<tr><td>${i+1}</td><td>${s.photo?'<img src="'+esc(s.photo)+'" class="student-table-photo">':'—'}</td><td>${esc(s.id)}</td><td><b>${esc(s.name)}</b></td><td>${esc(s.father||'-')}</td><td>${esc(s.dob||'-')}</td><td>${esc(s.className||'-')}</td><td>${esc(s.section||'-')}</td><td>${esc(s.mobile||'-')}</td><td><div class="actions"><button class="btn btn-info btn-sm" onclick="viewStudent('${esc(s.id)}')">View</button><button class="btn btn-warning btn-sm admin-only" onclick="openStudentModal('${esc(s.id)}')">Edit</button><button class="btn btn-danger btn-sm admin-only" onclick="deleteStudent('${esc(s.id)}')">Delete</button></div></td></tr>`).join(''):`<tr><td colspan="10" class="empty">No students found.</td></tr>`;
+  };
+
+  /* ---------- Multiple subject selection ---------- */
+  function selectedSubjects(){return [...document.querySelectorAll('#uploadSubjectPicker input[type=checkbox]:checked')].map(x=>x.value)}
+  function updateSubjectCount(){const n=selectedSubjects().length;const el=document.getElementById('selectedSubjectCount');if(el)el.textContent=n+' selected';}
+  window.selectSubjectsForClass=function(){const cls=document.getElementById('uploadMarkClass')?.value;const n=RECOMMENDED[cls]||6;document.querySelectorAll('#uploadSubjectPicker input').forEach((c,i)=>c.checked=i<n);updateSubjectCount();};
+  window.clearSubjectSelection=function(){document.querySelectorAll('#uploadSubjectPicker input').forEach(c=>c.checked=false);updateSubjectCount();};
+  window.initUploadMarksPage=function(){
+    const box=document.getElementById('uploadSubjectPicker');if(!box)return;
+    if(!box.dataset.ready){box.innerHTML=SUBJECTS.map(([n,k])=>`<label class="subject-check"><input type="checkbox" value="${esc(k)}" onchange="updateSelectedSubjectCount()"><span>${esc(n)}</span></label>`).join('');box.dataset.ready='1';}
+    updateSubjectCount();
+  };
+  window.updateSelectedSubjectCount=updateSubjectCount;
+
+  /* ---------- Multi-subject marks table ---------- */
+  window.importMarksheetStudents=function(){
+    if(typeof requireAdmin==='function'&&!requireAdmin())return;
+    const cls=document.getElementById('uploadMarkClass')?.value,exam=document.getElementById('uploadMarkExam')?.value,subs=selectedSubjects();
+    if(!cls||!exam){toastMsg('Class और Exam select करें।');return;}if(!subs.length){toastMsg('कम से कम 1 subject tick करें।');return;}
+    pgMarkRows=getStudents().filter(s=>s.className===cls).map(s=>({student:s,mark:(getMarks().find(m=>String(m.studentId)===String(s.id)&&String(m.exam)===String(exam))||{})}));
+    renderMultiMarksheetTable();
+    const st=document.getElementById('marksUploadStatus');if(st)st.innerHTML=`<b>✅ ${pgMarkRows.length} students imported.</b> Class ${esc(cls)} • ${subs.length} subjects • Exam ${esc(exam)}`;
+    renderMarksheetPreview();
+  };
+  function renderMultiMarksheetTable(){
+    const box=document.getElementById('marksheetTableBox');if(!box)return;const subs=selectedSubjects(),def=+(document.getElementById('uploadMarkMax')?.value||100)||100;
+    if(!pgMarkRows.length){box.innerHTML='<div class="empty">Students will appear here after Import Students.</div>';return;}
+    const h=subs.map(k=>`<th colspan="2">${esc(labelFor(k))}</th>`).join('');
+    const h2=subs.map(()=>'<th>Obtain</th><th>Max</th>').join('');
+    const rows=pgMarkRows.map((r,i)=>{const m=r.mark||{};let total=0,maxTotal=0;const cells=subs.map(k=>{const got=getMark(m,k),max=getMax(m,k,def);total+=got;maxTotal+=max;return `<td><input class="input ms-obtain" data-id="${esc(r.student.id)}" data-subject="${esc(k)}" type="number" min="0" max="${max}" value="${got}" oninput="updateMultiMarksSummary('${esc(r.student.id)}')"></td><td><input class="input ms-max" data-id="${esc(r.student.id)}" data-subject="${esc(k)}" type="number" min="1" value="${max}" oninput="updateMultiMarksSummary('${esc(r.student.id)}')"></td>`}).join('');const pct=maxTotal?total/maxTotal*100:0;return `<tr><td>${i+1}</td><td>${esc(r.student.id)}</td><td><b>${esc(r.student.name)}</b></td>${cells}<td id="ms-total-${esc(r.student.id)}">${total}</td><td id="ms-pct-${esc(r.student.id)}">${pct.toFixed(2)}%</td><td>${grade(pct)}</td></tr>`}).join('');
+    box.innerHTML=`<table style="min-width:${500+subs.length*150}px"><thead><tr><th rowspan="2">Sr.</th><th rowspan="2">Student ID</th><th rowspan="2">Student Name</th>${h}<th rowspan="2">Total</th><th rowspan="2">Percentage</th><th rowspan="2">Grade</th></tr><tr>${h2}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  window.updateMultiMarksSummary=function(id){const subs=selectedSubjects();let total=0,maxTotal=0;subs.forEach(k=>{const got=+(document.querySelector(`.ms-obtain[data-id="${CSS.escape(id)}"][data-subject="${CSS.escape(k)}"]`)?.value||0),max=+(document.querySelector(`.ms-max[data-id="${CSS.escape(id)}"][data-subject="${CSS.escape(k)}"]`)?.value||100);total+=got;maxTotal+=max});const pct=maxTotal?total/maxTotal*100:0;const a=document.getElementById('ms-total-'+id),b=document.getElementById('ms-pct-'+id);if(a)a.textContent=total;if(b)b.textContent=pct.toFixed(2)+'%';};
+  window.saveMarksheetMarks=async function(){
+    if(typeof requireAdmin==='function'&&!requireAdmin())return;const subs=selectedSubjects(),exam=document.getElementById('uploadMarkExam')?.value; if(!pgMarkRows.length||!subs.length){toastMsg('पहले Class + Subjects चुनकर Import Students करें।');return;}
+    const arr=getMarks();
+    for(const r of pgMarkRows){let m=arr.find(x=>String(x.studentId)===String(r.student.id)&&String(x.exam)===String(exam));if(!m){m={studentId:r.student.id,exam};arr.push(m)}for(const k of subs){const got=Math.max(0,+(document.querySelector(`.ms-obtain[data-id="${CSS.escape(r.student.id)}"][data-subject="${CSS.escape(k)}"]`)?.value||0));const max=Math.max(1,+(document.querySelector(`.ms-max[data-id="${CSS.escape(r.student.id)}"][data-subject="${CSS.escape(k)}"]`)?.value||100));m[k]=Math.min(got,max);m['maxMarks_'+k]=max;}}
+    window.marks=arr;localStorage.setItem('PG_MARKS',JSON.stringify(arr));try{await window.firebaseAcademicAPI?.saveAllMarks(arr)}catch(e){console.warn(e)}if(typeof renderMarks==='function')renderMarks();if(typeof renderResultPage==='function')renderResultPage();toastMsg('☁️ All selected subject marks saved online');
+  };
+  function renderMarksheetPreview(){const p=document.getElementById('marksheetPreview');if(!p)return;const cls=document.getElementById('uploadMarkClass')?.value||'',subs=selectedSubjects(),exam=document.getElementById('uploadMarkExam')?.value||'';if(!cls||!subs.length){p.style.display='none';return}p.style.display='block';p.innerHTML=`<div class="marksheet-a4"><div style="text-align:center;font-weight:800;font-size:18px">PATANJALI GURUKULAM</div><div style="text-align:center;margin-top:5px;font-weight:700">${esc(document.getElementById('marksheetTitle')?.value||'मूल्यांकन पत्र / MARKSHEET')}</div><div style="display:grid;grid-template-columns:1fr 1fr;margin-top:18px;gap:10px"><div>Class: <b>${esc(cls)}</b></div><div>Exam: <b>${esc(exam)}</b></div><div>Subjects: <b>${subs.length}</b></div><div>Students: <b>${pgMarkRows.length}</b></div></div><div style="margin-top:18px;border-top:1px solid #aaa;padding-top:12px">Front side = student details + logo. Back side = subject-wise Obtain / Maximum / Percentage / Grade, matching the uploaded report-card style.</div></div>`}
+
+  /* ---------- Excel export for multi-subject marksheet ---------- */
+  window.downloadMarksheetExcel=function(){
+    if(!pgMarkRows.length){toastMsg('पहले Import Students करें।');return;}if(!window.XLSX){toastMsg('Excel library load नहीं हुई।');return;}const subs=selectedSubjects(),exam=document.getElementById('uploadMarkExam').value,def=+(document.getElementById('uploadMarkMax').value||100);
+    const data=pgMarkRows.map((r,i)=>{const m=r.mark||{};const o={'Sr.':i+1,'Student ID':r.student.id,'Student Name':r.student.name,'Father Name':r.student.father||'','Class':r.student.className,'Section':r.student.section};let total=0,maxTotal=0;subs.forEach(k=>{const got=+(document.querySelector(`.ms-obtain[data-id="${CSS.escape(r.student.id)}"][data-subject="${CSS.escape(k)}"]`)?.value||getMark(m,k)),max=+(document.querySelector(`.ms-max[data-id="${CSS.escape(r.student.id)}"][data-subject="${CSS.escape(k)}"]`)?.value||getMax(m,k,def));o[labelFor(k)+' Obtain']=got;o[labelFor(k)+' Max']=max;o[labelFor(k)+' %']=(max?got/max*100:0).toFixed(2)+'%';total+=got;maxTotal+=max});o['Total']=total;o['Maximum']=maxTotal;o['Percentage']=(maxTotal?total/maxTotal*100:0).toFixed(2)+'%';o['Grade']=grade(maxTotal?total/maxTotal*100:0);o['Exam']=exam;return o});
+    const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Marksheet');XLSX.writeFile(wb,`Patanjali_${document.getElementById('uploadMarkClass').value}_${exam}_Marksheet.xlsx`);toastMsg('Excel downloaded');
+  };
+  window.downloadMarksTemplate=function(){
+    if(!window.XLSX){toastMsg('Excel library load नहीं हुई।');return;}const subs=selectedSubjects();const headers=['Student ID','Student Name','Father Name','Class','Section',...subs.flatMap(k=>[labelFor(k)+' Obtain',labelFor(k)+' Max'])];const ws=XLSX.utils.aoa_to_sheet([headers]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Marks Template');XLSX.writeFile(wb,'Patanjali_Multi_Subject_Marks_Template.xlsx');
+  };
+
+  /* ---------- Reference-style A4 front + back PDF ---------- */
+  function logoData(){return localStorage.getItem('PG_MARKSHEET_LOGO')||''}
+  function photoData(s){return s?.photo||''}
+  function drawSchoolLogo(doc,x,y,w,h){const img=logoData();if(img){try{doc.addImage(img,'AUTO',x,y,w,h);return}catch(e){}}doc.setFillColor(183,28,28);doc.circle(x+w/2,y+h/2,Math.min(w,h)/2,'F');doc.setTextColor(255,255,255);doc.setFont(undefined,'bold');doc.setFontSize(15);doc.text('ॐ',x+w/2,y+h/2+5,{align:'center'});doc.setTextColor(0,0,0)}
+  function drawBorder(doc){doc.setDrawColor(80,80,80);doc.setLineWidth(.6);doc.roundedRect(8,8,194,281,5,5);doc.setLineWidth(.25);doc.roundedRect(12,12,186,273,3,3)}
+  window.previewMarksheetLogo=function(e){const f=e.target?.files?.[0];if(!f)return;if(f.size>5*1024*1024){toastMsg('Logo 5 MB से छोटा रखें।');e.target.value='';return}const rd=new FileReader();rd.onload=()=>{localStorage.setItem('PG_MARKSHEET_LOGO',rd.result);const p=document.getElementById('marksheetLogoPreview');if(p)p.innerHTML='<img src="'+rd.result+'" style="max-height:70px;max-width:160px;border:1px solid #ddd;border-radius:6px;padding:4px">';};rd.readAsDataURL(f)};
+  window.downloadMarksheetPDF=async function(){
+    if(!pgMarkRows.length){toastMsg('पहले Import Students करें।');return;}const J=window.jspdf?.jsPDF;if(!J){toastMsg('PDF library load नहीं हुई।');return;}const subs=selectedSubjects(),cls=document.getElementById('uploadMarkClass').value,exam=document.getElementById('uploadMarkExam').value,def=+(document.getElementById('uploadMarkMax').value||100),session=document.getElementById('marksheetSession')?.value||'2025-26',title=document.getElementById('marksheetTitle')?.value||'मूल्यांकन पत्र / MARKSHEET';
+    pgMarkRows.forEach((r,idx)=>{
+      if(idx){}const doc=new J({orientation:'portrait',unit:'mm',format:'a4'});drawBorder(doc);
+      /* FRONT */
+      drawSchoolLogo(doc,20,18,28,28);doc.setFont(undefined,'bold');doc.setFontSize(18);doc.text('पातञ्जलि गुरुकुलम्',105,25,{align:'center'});doc.setFontSize(10);doc.text('PATANJALI GURUKULAM',105,32,{align:'center'});doc.setFont(undefined,'normal');doc.setFontSize(9);doc.text('शिक्षा • संस्कार • अनुशासन',105,38,{align:'center'});
+      doc.setDrawColor(100,100,100);doc.line(20,48,190,48);doc.setFont(undefined,'bold');doc.setFontSize(15);doc.text(title,105,59,{align:'center'});doc.setFontSize(10);doc.text('सत्र : '+session+'    |    परीक्षा : '+exam,105,67,{align:'center'});
+      if(photoData(r.student)){try{doc.addImage(photoData(r.student),'AUTO',157,78,28,34)}catch(e){}}
+      doc.setFontSize(10);doc.setFont(undefined,'normal');const info=[['नाम / Name',r.student.name||'-'],['पिता का नाम / Father',r.student.father||'-'],['विद्यार्थी ID',r.student.id||'-'],['कक्षा / Class',r.student.className||'-'],['वर्ग / Section',r.student.section||'-'],['जन्म तिथि / DOB',r.student.dob||'-'],['गृह / House',r.student.house||'-'],['मोबाइल',r.student.mobile||'-']];
+      doc.roundedRect(20,78,125,78,2,2);info.forEach((a,i)=>{const y=88+i*8.2;doc.setFont(undefined,'bold');doc.text(a[0],26,y);doc.setFont(undefined,'normal');doc.text(': '+String(a[1]),75,y,{maxWidth:64})});
+      doc.setFont(undefined,'bold');doc.setFontSize(12);doc.text('शैक्षिक प्रगति पत्र / STUDENT PROGRESS REPORT',105,178,{align:'center'});doc.setFont(undefined,'normal');doc.setFontSize(9);doc.text('यह प्रमाणित किया जाता है कि उपर्युक्त विद्यार्थी ने निर्धारित परीक्षा में सहभागिता की है।',105,188,{align:'center',maxWidth:165});doc.text('Student Signature',34,258);doc.text('Class Teacher',92,258);doc.text('Principal',166,258,{align:'center'});doc.line(20,253,60,253);doc.line(77,253,119,253);doc.line(147,253,188,253);
+      /* BACK */
+      doc.addPage();drawBorder(doc);drawSchoolLogo(doc,18,17,22,22);doc.setFont(undefined,'bold');doc.setFontSize(15);doc.text('पातञ्जलि गुरुकुलम्',105,25,{align:'center'});doc.setFontSize(10);doc.text('MARKS / PERFORMANCE DETAIL',105,32,{align:'center'});doc.setFont(undefined,'normal');doc.setFontSize(9);doc.text(`Student: ${r.student.name||'-'} | ID: ${r.student.id||'-'} | Class: ${cls} | Exam: ${exam}`,18,43);
+      const body=[];let total=0,maxTotal=0;subs.forEach(k=>{const got=+(document.querySelector(`.ms-obtain[data-id="${CSS.escape(r.student.id)}"][data-subject="${CSS.escape(k)}"]`)?.value||getMark(r.mark,k));const max=+(document.querySelector(`.ms-max[data-id="${CSS.escape(r.student.id)}"][data-subject="${CSS.escape(k)}"]`)?.value||getMax(r.mark,k,def));const pct=max?got/max*100:0;total+=got;maxTotal+=max;body.push([labelFor(k),String(got),String(max),pct.toFixed(2)+'%',grade(pct)])});const overall=maxTotal?total/maxTotal*100:0;
+      if(doc.autoTable)doc.autoTable({startY:50,margin:{left:18,right:18},head:[['विषय / Subject','प्राप्तांक','पूर्णांक','प्रतिशत','ग्रेड']],body,theme:'grid',styles:{fontSize:9,cellPadding:3.2,lineColor:[120,120,120],lineWidth:.2},headStyles:{fillColor:[235,235,235],textColor:[0,0,0],fontStyle:'bold'}});
+      let y=doc.lastAutoTable?.finalY||100;doc.setFont(undefined,'bold');doc.setFontSize(10);doc.text(`कुल प्राप्तांक : ${total} / ${maxTotal}`,18,y+12);doc.text(`कुल प्रतिशत : ${overall.toFixed(2)}%`,75,y+12);doc.text(`समग्र ग्रेड : ${grade(overall)}`,145,y+12);doc.setFont(undefined,'normal');doc.setFontSize(9);doc.text('ग्रेडिंग : A+ 90-100 | A 80-89 | B+ 70-79 | B 60-69 | C 50-59 | D 33-49 | F 0-32',18,y+23);doc.text('विषय अध्यापक',32,258);doc.text('परीक्षा प्रभारी',101,258);doc.text('प्रधानाचार्य',166,258,{align:'center'});doc.line(20,253,60,253);doc.line(82,253,122,253);doc.line(147,253,188,253);
+      doc.save(`Patanjali_${r.student.id}_${cls}_${exam}_Marksheet.pdf`);
+    });
+    toastMsg('A4 front + back marksheets तैयार हैं');
+  };
+
+  /* ---------- Read-only student UI ---------- */
+  function applyStudentReadonly(){
+    const isStudent=role()==='student';document.body.classList.toggle('student-readonly',isStudent);
+    if(!isStudent)return;
+    ['#attendance .actions:not(.download-bar)','#fees .page-header .btn-primary','#settings .settings-write','#settings .data-write','#uploadMarks .marks-write'].forEach(sel=>document.querySelectorAll(sel).forEach(el=>el.style.display='none'));
+    document.querySelectorAll('#attendance .mark-btn,#marksheetTableBox input').forEach(el=>{el.disabled=true;el.readOnly=true});
+    document.querySelectorAll('#fees .btn-warning,#fees .btn-danger,#fees .btn-primary').forEach(el=>el.style.display='none');
+    document.querySelectorAll('#settings input,#settings textarea').forEach(el=>el.readOnly=true);
+  }
+  const oldApply=window.applyRolePermissions;
+  window.applyRolePermissions=function(){if(typeof oldApply==='function')oldApply();applyStudentReadonly();setTimeout(()=>{applyStudentReadonly();renderStudents();renderAdminUsers();},150)};
+
+  /* ---------- Admin users ---------- */
+  function localAdmins(){let a=[];try{a=JSON.parse(localStorage.getItem('PG_ADMINS')||'[]')}catch(e){}if(!Array.isArray(a))a=[];const legacy=(()=>{try{return JSON.parse(localStorage.getItem('PG_AUTH')||'null')}catch(e){return null}})();if(legacy?.adminId&&!a.some(x=>String(x.id).toLowerCase()===String(legacy.adminId).toLowerCase()))a.unshift({id:legacy.adminId,password:legacy.adminPassword||'1234',main:true});if(!a.length)a=[{id:'admin',password:'1234',main:true}];return a}
+  function saveAdmins(a){localStorage.setItem('PG_ADMINS',JSON.stringify(a));}
+  async function syncAdmins(){try{if(!window.firebaseDB)return;const {getDocs,collection}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');const snap=await getDocs(collection(window.firebaseDB,'erp_admins'));const online=snap.docs.map(d=>({...d.data(),id:d.id}));if(online.length){saveAdmins(online)}}catch(e){console.warn('Admin online sync:',e)}}
+  window.renderAdminUsers=function(){const box=document.getElementById('adminUsersTable');if(!box)return;const a=localAdmins();box.innerHTML='<div class="panel-title" style="font-size:14px">Current Admin Users</div><table><thead><tr><th>Admin ID</th><th>Role</th><th>Action</th></tr></thead><tbody>'+a.map((x,i)=>`<tr><td><b>${esc(x.id)}</b></td><td>${x.main?'Main Admin':'Admin'}</td><td>${x.main?'<span class="badge paid">Protected</span>':`<button class="btn btn-danger btn-sm" onclick="deleteAdminUser('${esc(x.id)}')">Delete</button>`}</td></tr>`).join('')+'</tbody></table>'}
+  window.createAdminUser=async function(){if(role()!=='admin'){toastMsg('Only Admin can create another Admin.');return}const id=document.getElementById('newAdminId')?.value.trim(),pw=document.getElementById('newAdminPassword')?.value;if(!id||pw.length<4){toastMsg('Admin ID और कम से कम 4 character password दें।');return}const a=localAdmins();if(a.some(x=>String(x.id).toLowerCase()===id.toLowerCase())){toastMsg('यह Admin ID पहले से मौजूद है।');return}const item={id,password:pw,main:false};a.push(item);saveAdmins(a);try{if(window.firebaseDB){const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await setDoc(doc(window.firebaseDB,'erp_admins',id),item)}}catch(e){console.warn(e)}document.getElementById('newAdminId').value='';document.getElementById('newAdminPassword').value='';renderAdminUsers();toastMsg('✅ New Admin user created');}
+  window.deleteAdminUser=async function(id){if(role()!=='admin')return;const a=localAdmins();const x=a.find(z=>String(z.id)===String(id));if(x?.main){toastMsg('Main Admin delete नहीं किया जा सकता।');return}if(!confirm('Delete Admin '+id+'?'))return;saveAdmins(a.filter(z=>String(z.id)!==String(id)));try{if(window.firebaseDB){const {deleteDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await deleteDoc(doc(window.firebaseDB,'erp_admins',id))}}catch(e){console.warn(e)}renderAdminUsers();toastMsg('Admin deleted');}
+  window.saveAdminCredentials=async function(){if(role()!=='admin'){toastMsg('Only Admin');return}const id=document.getElementById('authAdminId')?.value.trim(),pw=document.getElementById('authAdminPassword')?.value;if(!id||!pw){toastMsg('Admin ID और password required');return}const a=localAdmins().filter(x=>!x.main);a.unshift({id,password:pw,main:true});saveAdmins(a);localStorage.setItem('PG_AUTH',JSON.stringify({adminId:id,adminPassword:pw}));try{if(window.firebaseDB){const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await setDoc(doc(window.firebaseDB,'erp_admins',id),{id,password:pw,main:true})}}catch(e){}renderAdminUsers();toastMsg('Main Admin login updated');}
+  window.doLogin=async function(){
+    const id=document.getElementById('loginId').value.trim(),pw=document.getElementById('loginPassword').value.trim(),err=document.getElementById('loginError');err.textContent='';
+    if(loginRole==='admin'){
+      const a=localAdmins();const hit=a.find(x=>String(x.id).toLowerCase()===id.toLowerCase()&&String(x.password)===pw);if(!hit){err.textContent='❌ Admin ID या Password गलत है।';return}currentRole='admin';currentStudentId='';window.currentRole='admin';window.currentStudentId='';
+    }else{
+      const s=getStudents().find(x=>String(x.id).toLowerCase()===id.toLowerCase());if(!s){err.textContent='❌ Student ID नहीं मिला।';return}if(pw!==String(s.password||'1234')){err.textContent='❌ Password गलत है।';return}currentRole='student';currentStudentId=s.id;window.currentRole='student';window.currentStudentId=s.id;
+    }
+    localStorage.setItem('PG_LOGIN_ROLE',currentRole);localStorage.setItem('PG_LOGIN_STUDENT_ID',currentStudentId);document.getElementById('loginScreen').style.display='none';applyRolePermissions();toastMsg(currentRole==='admin'?'Admin login successful':'Student login successful');
+  };
+
+  /* ---------- Messaging: Name/ID selector + broadcast ---------- */
+  window.startBroadcastMessage=function(){if(role()!=='admin')return;pgBroadcast=true;pgChatTarget={role:'broadcast',id:'all',name:'All Students'};const b=document.getElementById('broadcastBanner');if(b)b.classList.add('show');const h=document.getElementById('messageChatHead');if(h)h.textContent='📢 All Students';renderMessagesFinal();}
+  function exitBroadcast(){pgBroadcast=false;const b=document.getElementById('broadcastBanner');if(b)b.classList.remove('show')}
+  window.selectMessageStudent=function(id,r='student'){pgBroadcast=false;document.getElementById('broadcastBanner')?.classList.remove('show');const s=getStudents().find(x=>String(x.id)===String(id));pgChatTarget=r==='admin'?{role:'admin',id:'admin',name:'Administrator'}:{role:'student',id:id,name:s?.name||id};renderMessagesFinal()}
+  function renderMessageSelector(users){const box=document.getElementById('messageUsers');if(!box)return;const options=users.map((u,i)=>`<option value="${esc(u.role+'|'+u.id)}">${esc(maskedName(u.name))} • ${esc(u.id)}</option>`).join('');box.innerHTML=`<div class="msg-selector"><b>Find by</b><select id="messageFindMode" class="select" onchange="renderMessages()"><option value="name">Name</option><option value="id">ID</option></select></div><input id="messageSearch" class="input" placeholder="Search name or ID..." oninput="filterMessageUsers()"><select id="messageRecipientSelect" class="select" size="8" style="margin-top:8px" onchange="chooseMessageRecipient(this.value)">${options}</select><div class="small" style="margin-top:8px">Full name is hidden in the message selector. Select using first name/last initial or Student ID.</div>`}
+  window.filterMessageUsers=function(){const q=(document.getElementById('messageSearch')?.value||'').toLowerCase(),mode=document.getElementById('messageFindMode')?.value||'name';const roleNow=role(),all=getStudents().filter(s=>String(s.id)!==String(me()));const users=roleNow==='student'?[{role:'admin',id:'admin',name:'Administrator'},...all.map(s=>({role:'student',id:s.id,name:s.name}))]:all.map(s=>({role:'student',id:s.id,name:s.name}));const filtered=users.filter(u=>{const n=String(u.name||'').toLowerCase(),id=String(u.id||'').toLowerCase();return !q||(mode==='id'?id.includes(q):n.includes(q))});renderMessageSelector(filtered);const sel=document.getElementById('messageRecipientSelect');if(sel){const want=pgChatTarget.role+'|'+pgChatTarget.id;[...sel.options].forEach(o=>o.selected=o.value===want)}}
+  window.chooseMessageRecipient=function(v){if(!v)return;const [r,...rest]=v.split('|'),id=rest.join('|');if(r==='admin')pgChatTarget={role:'admin',id:'admin',name:'Administrator'};else{const s=getStudents().find(x=>String(x.id)===String(id));pgChatTarget={role:'student',id,name:s?.name||id}}renderMessagesFinal()}
+  async function loadMessages(){try{return await window.firebaseMessagingAPI?.load()||[]}catch(e){return JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]')}}
+  async function renderMessagesFinal(){const usersBox=document.getElementById('messageUsers'),list=document.getElementById('messageList'),head=document.getElementById('messageChatHead');if(!usersBox||!list)return;const all=await loadMessages();const r=role(),my=r==='student'?me():'admin';if(pgBroadcast&&r==='admin'){head.textContent='📢 Message All Students';usersBox.innerHTML='<div class="notice"><b>Broadcast selected</b><br>One message will be sent to all active student users.</div><button class="btn btn-secondary btn-sm" onclick="exitBroadcastAndRefresh()">Cancel Broadcast</button>';}else{const users=r==='student'?[{role:'admin',id:'admin',name:'Administrator'},...getStudents().filter(s=>String(s.id)!==String(my)).map(s=>({role:'student',id:s.id,name:s.name}))]:getStudents().map(s=>({role:'student',id:s.id,name:s.name}));if(!users.some(u=>u.role===pgChatTarget.role&&String(u.id)===String(pgChatTarget.id)))pgChatTarget=users[0]||{role:r==='student'?'admin':'student',id:r==='student'?'admin':'',name:r==='student'?'Administrator':''};renderMessageSelector(users);head.textContent='Chat with '+(pgChatTarget.role==='admin'?'Administrator':maskedName(pgChatTarget.name));}
+    if(pgBroadcast&&r==='admin'){list.innerHTML='<div class="empty">Broadcast mode selected. Type your message below and press Send.</div>';return}
+    const conv=all.filter(m=>(String(m.senderId)===String(my)&&String(m.receiverId)===String(pgChatTarget.id))||(String(m.senderId)===String(pgChatTarget.id)&&String(m.receiverId)===String(my)));list.innerHTML=conv.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(m=>{const att=m.attachment;let media='';if(att){if(att.kind==='image')media=`<div style="margin-top:7px"><img src="${esc(att.url)}" alt="photo" style="max-width:220px;max-height:180px;border-radius:8px"></div>`;else if(att.kind==='video')media=`<div style="margin-top:7px"><video controls style="max-width:250px;max-height:180px" src="${esc(att.url)}"></video></div>`;else media=`<div style="margin-top:7px"><a href="${esc(att.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">📎 ${esc(att.name)}</a></div>`;}return `<div class="chat-msg ${String(m.senderId)===String(my)?'me':'them'}"><b>${esc(m.senderRole==='student'?maskedName(m.senderName):m.senderName||'')}</b>${m.text?`<div>${esc(m.text)}</div>`:''}${media}<small>${new Date(m.createdAt).toLocaleString()}</small></div>`}).join('')||'<div class="empty">No messages yet.</div>';list.scrollTop=list.scrollHeight;}
+  window.renderMessages=renderMessagesFinal;window.exitBroadcastAndRefresh=function(){pgBroadcast=false;document.getElementById('broadcastBanner')?.classList.remove('show');renderMessagesFinal()};
+  window.sendMessage=async function(){
+    const text=(document.getElementById('messageText')?.value||'').trim(),file=document.getElementById('messageFile')?.files?.[0]||null,r=role(),senderId=r==='student'?me():'admin';if(!senderId)return;if(r==='student'&&!pgChatTarget.id){toastMsg('पहले recipient select करें।');return}if(!text&&!file){toastMsg('Message या file चुनें।');return}
+    if(r==='student'&&pgChatTarget.id===senderId){toastMsg('अपने आप को message नहीं भेज सकते।');return}
+    let attachment=null;if(file){const video=file.type.startsWith('video/'),limit=video?50*1024*1024:25*1024*1024;if(file.size>limit){toastMsg(video?'Video maximum 50 MB है।':'Photo/File maximum 25 MB है।');return}if(!window.firebaseStorageAPI){toastMsg('Firebase Storage ready नहीं है।');return}try{attachment=await window.firebaseStorageAPI.upload(file,senderId,pgBroadcast?'all':pgChatTarget.id)}catch(e){toastMsg('File upload failed: '+e.message);return}}
+    const senderName=r==='student'?(getStudents().find(s=>String(s.id)===String(senderId))?.name||senderId):'Administrator';
+    const targets=pgBroadcast&&r==='admin'?getStudents().filter(s=>s.status!=='Inactive'):[{id:pgChatTarget.id,name:pgChatTarget.name,role:pgChatTarget.role}];if(pgBroadcast&&!targets.length){toastMsg('No active students found.');return}
+    for(const t of targets){const msg={id:'MSG_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),senderRole:r,senderId,senderName,receiverRole:t.role||'student',receiverId:t.id,receiverName:t.name||'',text,attachment,createdAt:new Date().toISOString(),read:false};try{await window.firebaseMessagingAPI?.save(msg)}catch(e){console.warn(e)}const local=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]');local.push(msg);localStorage.setItem('PG_MESSAGES',JSON.stringify(local))}
+    document.getElementById('messageText').value='';if(document.getElementById('messageFile'))document.getElementById('messageFile').value='';toastMsg(pgBroadcast?'📢 Message sent to all students':'Message sent');if(pgBroadcast){pgBroadcast=false;document.getElementById('broadcastBanner')?.classList.remove('show')}await renderMessagesFinal();
+  };
+
+  /* Keep student readonly after page changes */
+  const oldShow=window.showPage;window.showPage=function(id,el){if(typeof oldShow==='function')oldShow(id,el);setTimeout(()=>{applyStudentReadonly();if(id==='messages')renderMessagesFinal();if(id==='uploadMarks')initUploadMarksPage();if(id==='settings')renderAdminUsers()},80)};
+
+  /* startup */
+  setTimeout(async()=>{try{await syncAdmins()}catch(e){}if(role()==='admin'){const a=localAdmins();const id=document.getElementById('authAdminId'),pw=document.getElementById('authAdminPassword');if(id)id.value=a.find(x=>x.main)?.id||a[0]?.id||'admin';if(pw)pw.value=a.find(x=>x.main)?.password||'1234';renderAdminUsers()}initUploadMarksPage();applyStudentReadonly();renderStudents();},500);
 })();
 
 </script>
