@@ -21,6 +21,30 @@ body{background:#f4f6f9;color:#30343b}.topbar{height:65px;background:#b71c1c;col
 .bulk-subitem{font-size:13px!important;padding:10px 12px!important;background:rgba(255,255,255,.03);}
 .bulk-subitem .nav-icon{font-size:14px;}
 </style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+<style>
+.download-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+.download-bar .btn{font-size:12px}
+.chat-layout{display:grid;grid-template-columns:280px 1fr;gap:16px;min-height:560px}
+.chat-users{max-height:560px;overflow:auto;border:1px solid #e5e7eb;border-radius:12px;padding:8px;background:#fafafa}
+.chat-user{padding:12px;border-radius:10px;cursor:pointer;margin-bottom:6px;background:#fff;border:1px solid #eee}
+.chat-user.active{border-color:#b71c1c;background:#fff5f5}
+.chat-user small{display:block;color:#777;margin-top:4px}
+.chat-window{display:flex;flex-direction:column;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff}
+.chat-head{padding:14px 16px;border-bottom:1px solid #eee;font-weight:700}
+.chat-messages{flex:1;min-height:390px;max-height:460px;overflow:auto;padding:16px;background:#f7f8fa}
+.chat-msg{max-width:75%;padding:10px 13px;border-radius:13px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.chat-msg.me{margin-left:auto;background:#b71c1c;color:#fff;border-bottom-right-radius:4px}
+.chat-msg.them{background:#fff;border-bottom-left-radius:4px}
+.chat-msg small{display:block;opacity:.7;margin-top:5px;font-size:10px}
+.chat-compose{display:flex;gap:8px;padding:12px;border-top:1px solid #eee}
+.chat-compose textarea{flex:1;min-height:48px;resize:none}
+.wide-table{overflow-x:auto}
+.result-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:15px}
+@media(max-width:800px){.chat-layout{grid-template-columns:1fr}.result-summary{grid-template-columns:1fr 1fr}.chat-users{max-height:220px}}
+</style>
 </head>
 <body>
 <div id="loginScreen" class="login-screen"><div class="login-card"><div class="login-logo">PG</div><h1>Patanjali Gurukulam</h1><div class="login-sub">ERP Login Panel</div><div class="role-tabs"><div id="adminTab" class="role-tab active" onclick="selectLoginRole('admin')">👨‍💼 Admin</div><div id="studentTab" class="role-tab" onclick="selectLoginRole('student')">👨‍🎓 Student</div></div><div class="form-group"><label id="loginIdLabel">Admin ID</label><input id="loginId" class="input" placeholder="Enter Admin ID" autocomplete="username"></div><div class="form-group" style="margin-top:12px"><label>Password</label><input id="loginPassword" type="password" class="input" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div><button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="doLogin()">🔐 Login</button><div id="loginError" class="login-error"></div><div class="login-help" id="loginHelp">Admin login: <b>admin</b> / <b>1234</b></div></div></div>
@@ -32,19 +56,22 @@ body{background:#f4f6f9;color:#30343b}.topbar{height:65px;background:#b71c1c;col
 <div class="nav-item" onclick="showPage('students',this)"><span class="nav-icon">👨‍🎓</span>Students</div>
 <div class="nav-item" onclick="showPage('bulkStudents',this)"><span class="nav-icon">📥</span>Bulk Student Upload</div>
 <div class="nav-item" onclick="showPage('attendance',this)"><span class="nav-icon">📅</span>Attendance</div>
-<div class="nav-item" onclick="showPage('marks',this)"><span class="nav-icon">📝</span>Marks & Results</div>
+<div class="nav-item" onclick="showPage('marks',this)"><span class="nav-icon">📝</span>Marks</div>
+<div class="nav-item admin-only" onclick="showPage('uploadMarks',this)"><span class="nav-icon">📤</span>Upload Marks</div>
+<div class="nav-item" onclick="showPage('results',this)"><span class="nav-icon">🏆</span>Results</div>
 <div class="nav-item" onclick="showPage('fees',this)"><span class="nav-icon">💰</span>Fees</div>
 <div class="nav-item" onclick="showPage('reports',this)"><span class="nav-icon">📊</span>Reports</div>
+<div class="nav-item" onclick="showPage('messages',this)"><span class="nav-icon">💬</span>Messages</div>
 <div class="sidebar-title">System</div>
 <div class="nav-item" onclick="showPage('settings',this)"><span class="nav-icon">⚙️</span>Settings / Profile</div>
 <div class="nav-item" onclick="logout()"><span class="nav-icon">🚪</span>Logout</div>
 </aside>
 <main class="main">
 <section id="dashboard" class="page active"><div class="page-header"><div><h1>Dashboard</h1><p>Welcome to Patanjali Gurukulam ERP</p></div><div id="currentDate" class="small"></div></div><div class="cards"><div class="card"><span class="card-icon">👨‍🎓</span><div class="card-title">Total Students</div><div class="card-number" id="dStudents">0</div></div><div class="card"><span class="card-icon">✅</span><div class="card-title">Present Today</div><div class="card-number" id="dPresent">0</div></div><div class="card"><span class="card-icon">💰</span><div class="card-title">Fees Collected</div><div class="card-number" id="dFees">₹0</div></div><div class="card"><span class="card-icon">📊</span><div class="card-title">Average Result</div><div class="card-number" id="dResult">0%</div></div></div><div class="grid-2"><div class="panel"><div class="panel-title">Quick Actions</div><div class="quick-grid"><div class="quick" onclick="showPageById('students')">👨‍🎓 Add / Manage Students</div><div class="quick" onclick="showPageById('attendance')">📅 Take Attendance</div><div class="quick" onclick="showPageById('marks')">📝 Enter Marks</div><div class="quick" onclick="showPageById('fees')">💰 Fee Collection</div></div></div><div class="panel"><div class="panel-title">System Overview</div><p class="small">This is a frontend-only ERP. Data is stored in this browser using localStorage. No PHP, Node.js, MySQL or API is required.</p><br><div id="dashboardNotice" class="notice"></div></div></div></section>
-<section id="students" class="page"><div class="page-header"><div><h1>Student Management</h1><p>Add, search, edit, view and delete students.</p></div><button class="btn btn-primary admin-only" onclick="openStudentModal()">＋ Add Student</button></div>
+<section id="students" class="page"><div class="page-header"><div><h1>Student Management</h1><p>Add, search, edit, view and delete students.</p></div><button class="btn btn-primary admin-only" onclick="openStudentModal()">＋ Add Student</button></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('students')">⬇ Download Excel</button><button class="btn btn-danger" onclick="downloadPDF('students')">⬇ Download PDF</button></div>
 
-<div class="panel"><div class="table-header"><div class="panel-title">Student List</div><div class="search-box"><input id="studentSearch" class="input" placeholder="Search name / ID / class..." oninput="renderStudents()"><select id="studentClassFilter" class="select" onchange="renderStudents()"><option value="">All Classes</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>Student ID</th><th>Name</th><th>Father</th><th>Class</th><th>Section</th><th>Mobile</th><th>Actions</th></tr></thead><tbody id="studentTable"></tbody></table></div></div></section>
-<section id="bulkStudents" class="page"><div class="page-header"><div><h1>Bulk Student Upload</h1><p>Excel / CSV से एक साथ students import करें।</p></div></div><div class="panel bulk-panel"><div class="panel-title">📥 Bulk Student Upload</div><p class="small" style="margin:8px 0 15px">आपकी file में Class को VI, VII, VIII, IX, X, XI, XII और Section A–J रखें। Roll No. की जरूरत नहीं है।</p><div class="bulk-actions"><label class="btn btn-primary admin-only">📂 Select Excel / CSV <input type="file" id="studentBulkFile" accept=".xlsx,.xls,.csv" onchange="previewBulkStudents(event)" hidden></label><button class="btn btn-info admin-only" onclick="downloadStudentTemplate()">⬇ Download Template</button>
+<div class="panel"><div class="table-header"><div class="panel-title">Student List</div><div class="search-box"><input id="studentSearch" class="input" placeholder="Search name / ID / class..." oninput="renderStudents()"><select id="studentClassFilter" class="select" onchange="renderStudents()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>Student ID</th><th>Name</th><th>Father</th><th>Class</th><th>Section</th><th>Mobile</th><th>Actions</th></tr></thead><tbody id="studentTable"></tbody></table></div></div></section>
+<section id="bulkStudents" class="page"><div class="page-header"><div><h1>Bulk Student Upload</h1><p>Excel / CSV से एक साथ students import करें।</p></div></div><div class="panel bulk-panel"><div class="panel-title">📥 Bulk Student Upload</div><p class="small" style="margin:8px 0 15px">आपकी file में Class को I से XII और Section A–J रखें। Roll No. की जरूरत नहीं है।</p><div class="bulk-actions"><label class="btn btn-primary admin-only">📂 Select Excel / CSV <input type="file" id="studentBulkFile" accept=".xlsx,.xls,.csv" onchange="previewBulkStudents(event)" hidden></label><button class="btn btn-info admin-only" onclick="downloadStudentTemplate()">⬇ Download Template</button>
  <select id="bulkMode" class="select" style="max-width:190px">
   <option value="skip">Duplicate ID: Skip</option>
   <option value="update">Duplicate ID: Update</option>
@@ -65,20 +92,24 @@ function handleSchoolExcelImport(input) {
 </script></div><div class="notice" style="margin-top:14px"><b>Columns:</b> Student ID, Name, Father Name, Mother Name, Date of Birth, House, Class, Section, Mobile, Address</div><div class="bulk-paste"><div class="panel-title" style="font-size:15px">📋 Paste Excel Data & Preview</div><p class="small" style="margin-bottom:8px">Excel में header सहित rows copy करके नीचे paste करें। Tab-separated data automatically पढ़ा जाएगा।</p><textarea id="bulkPasteData" class="textarea" placeholder="Student ID	Name	Father Name	Mother Name	Date of Birth	House	Class	Section	Mobile	Address"></textarea><div class="actions" style="margin-top:8px"><button class="btn btn-info admin-only" onclick="previewPastedBulkStudents()">👁 Preview Pasted Data</button><button class="btn btn-secondary admin-only" onclick="clearPastedBulkStudents()">Clear Paste</button></div></div><div id="bulkPreview" class="bulk-preview"></div><div id="bulkImportActions" class="form-actions" style="display:none;margin-top:15px"><button class="btn btn-success admin-only" onclick="importBulkStudents()">✅ Import All Students</button><button class="btn btn-secondary admin-only" onclick="clearBulkPreview()">Clear</button></div></div></section>
 <section id="attendance" class="page"><div class="page-header">
  <div><h1>Attendance</h1><p>Daily class-wise attendance management.</p></div>
- <button class="btn btn-success admin-only" onclick="saveAttendance()">💾 Save Attendance</button></div><div class="panel"><div class="filters"><div><label class="small">Date</label><input id="attDate" type="date" class="input" onchange="renderAttendance()"></div><div><label class="small">Class</label><select id="attClass" class="select" onchange="renderAttendance()"><option value="">All Classes</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="attSection" class="select" onchange="renderAttendance()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="attSearch" class="input" placeholder="Student name / ID" oninput="renderAttendance()"></div></div><div class="summary"><div class="mini stat-blue">Total<strong id="attTotal">0</strong></div><div class="mini stat-green">Present<strong id="attPresent">0</strong></div><div class="mini stat-red">Absent<strong id="attAbsent">0</strong></div><div class="mini stat-yellow">Leave<strong id="attLeave">0</strong></div></div><div class="actions" style="margin-bottom:15px"><button class="btn btn-success btn-sm" onclick="markAllAttendance('Present')">Mark All Present</button><button class="btn btn-danger btn-sm" onclick="markAllAttendance('Absent')">Mark All Absent</button><button class="btn btn-warning btn-sm" onclick="markAllAttendance('Leave')">Mark All Leave</button><button class="btn btn-secondary btn-sm" onclick="clearAttendance()">Clear</button></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>ID</th><th>Student</th><th>Class</th><th>Section</th><th>Status</th></tr></thead><tbody id="attendanceTable"></tbody></table></div></div></section>
-<section id="marks" class="page"><div class="page-header"><div><h1>Marks & Results</h1><p>Subject-wise marks entry and result calculation.</p></div><div class="actions"><button class="btn btn-primary admin-only" onclick="openMarksModal()">＋ Enter / Edit Marks</button><button class="btn btn-success admin-only" onclick="saveMarks()">💾 Save</button></div></div><div class="panel"><div class="filters"><div><label class="small">Exam</label><select id="markExam" class="select" onchange="renderMarks()"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div><label class="small">Class</label><select id="markClass" class="select" onchange="renderMarks()"><option value="">All Classes</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="markSection" class="select" onchange="renderMarks()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="markSearch" class="input" placeholder="Student name / ID" oninput="renderMarks()"></div></div><div class="table-box"><table><thead><tr><th>Student</th><th>Class</th><th>English</th><th>Maths</th><th>Science</th><th>Sanskrit</th><th>Social Sci.</th><th>Total</th><th>%</th><th>Grade</th><th>Action</th></tr></thead><tbody id="marksTable"></tbody></table></div></div></section>
+ <button class="btn btn-success admin-only" onclick="saveAttendance()">💾 Save Attendance</button></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('attendance')">⬇ Download Excel</button><button class="btn btn-danger" onclick="downloadPDF('attendance')">⬇ Download PDF</button></div><div class="panel"><div class="filters"><div><label class="small">Date</label><input id="attDate" type="date" class="input" onchange="renderAttendance()"></div><div><label class="small">Class</label><select id="attClass" class="select" onchange="renderAttendance()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="attSection" class="select" onchange="renderAttendance()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="attSearch" class="input" placeholder="Student name / ID" oninput="renderAttendance()"></div></div><div class="summary"><div class="mini stat-blue">Total<strong id="attTotal">0</strong></div><div class="mini stat-green">Present<strong id="attPresent">0</strong></div><div class="mini stat-red">Absent<strong id="attAbsent">0</strong></div><div class="mini stat-yellow">Leave<strong id="attLeave">0</strong></div></div><div class="actions" style="margin-bottom:15px"><button class="btn btn-success btn-sm" onclick="markAllAttendance('Present')">Mark All Present</button><button class="btn btn-danger btn-sm" onclick="markAllAttendance('Absent')">Mark All Absent</button><button class="btn btn-warning btn-sm" onclick="markAllAttendance('Leave')">Mark All Leave</button><button class="btn btn-secondary btn-sm" onclick="clearAttendance()">Clear</button></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>ID</th><th>Student</th><th>Class</th><th>Section</th><th>Status</th></tr></thead><tbody id="attendanceTable"></tbody></table></div></div></section>
+<section id="marks" class="page"><div class="page-header"><div><h1>Marks</h1><p>17-subject marks entry, class-wise filtering and online records.</p></div><div class="actions"><button class="btn btn-primary admin-only" onclick="openMarksModal()">＋ Enter / Edit Marks</button><button class="btn btn-success admin-only" onclick="saveMarks()">💾 Save</button></div></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('marks')">⬇ Excel</button><button class="btn btn-danger" onclick="downloadPDF('marks')">⬇ PDF</button></div><div class="panel"><div class="filters"><div><label class="small">Exam</label><select id="markExam" class="select" onchange="renderMarks()"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div><label class="small">Class</label><select id="markClass" class="select" onchange="renderMarks()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="markSection" class="select" onchange="renderMarks()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="markSearch" class="input" placeholder="Student name / ID" oninput="renderMarks()"></div></div><div class="table-box wide-table"><table><thead><tr><th>Student</th><th>Class</th><th>Math</th><th>English</th><th>Science</th><th>Social Science</th><th>Hindi</th><th>Sanskrit</th><th>Sahitya</th><th>Vyakaran</th><th>Shastra</th><th>Web App</th><th>Pol. Science</th><th>History</th><th>Economics</th><th>Yoga</th><th>PE</th><th>Music</th><th>IT</th><th>Total</th><th>%</th><th>Grade</th><th>Action</th></tr></thead><tbody id="marksTable"></tbody></table></div></div></section>
+
+<section id="uploadMarks" class="page"><div class="page-header"><div><h1>📋 A4 Marksheet Builder</h1><p>Class, Subject और Exam चुनें → Students Import करें → Marks भरें → A4 Marksheet PDF बनाएं।</p></div></div><div class="panel"><div class="filters"><div><label class="small">Select Class</label><select id="uploadMarkClass" class="select"><option value="">Select Class</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Select Subject</label><select id="uploadMarkSubject" class="select"></select></div><div><label class="small">Select Exam</label><select id="uploadMarkExam" class="select"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div><label class="small">Maximum Marks</label><input id="uploadMarkMax" class="input" type="number" min="1" max="1000" value="100"></div></div><div class="actions" style="margin:15px 0"><button class="btn btn-primary" onclick="importMarksheetStudents()">👨‍🎓 Import Students</button><button class="btn btn-success admin-only" onclick="saveMarksheetMarks()">💾 Save Marks Online</button><button class="btn btn-info" onclick="downloadMarksheetExcel()">⬇ Excel</button><button class="btn btn-danger" onclick="downloadMarksheetPDF()">⬇ A4 PDF Marksheet</button><button class="btn btn-secondary" onclick="downloadMarksTemplate()">📄 Excel Template</button></div><div class="notice"><b>Workflow:</b> पहले Class + Subject + Exam चुनें, फिर <b>Import Students</b> दबाएं। नीचे पूरी class की list आएगी। Obtain Marks भरें और Save करें। PDF में हर student की <b>front side</b> पर नाम/ID/Father/Class/Section + school logo और <b>back side</b> पर selected subject के marks होंगे।</div><div class="panel" style="margin-top:15px;border:1px solid #e5e7eb"><div class="form-grid" style="grid-template-columns:1fr 1fr"><div class="form-group"><label>School Logo (optional)</label><input id="marksheetLogoFile" class="input" type="file" accept="image/png,image/jpeg,image/webp" onchange="previewMarksheetLogo(event)"></div><div class="form-group"><label>Marksheet Title</label><input id="marksheetTitle" class="input" value="STUDENT MARKSHEET"></div></div><div id="marksheetLogoPreview" class="small" style="margin-top:8px">Default PG logo will be used if no image is selected.</div></div><div id="marksUploadStatus" class="notice" style="margin-top:15px">Class, subject और exam चुनकर Import Students दबाएं।</div><div id="marksheetTableBox" class="table-box" style="margin-top:15px"><div class="empty">Students will appear here after Import Students.</div></div></div></section>
+<section id="results" class="page"><div class="page-header"><div><h1>Results</h1><p>Student-wise result summary and percentage.</p></div></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('results')">⬇ Download Excel</button><button class="btn btn-danger" onclick="downloadPDF('results')">⬇ Download PDF</button></div><div class="panel"><div class="filters"><div><label class="small">Exam</label><select id="resultExam" class="select" onchange="renderResultPage()"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div><label class="small">Class</label><select id="resultClass" class="select" onchange="renderResultPage()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div></div><div class="result-summary"><div class="card"><div class="card-title">Students</div><div class="card-number" id="resultCount">0</div></div><div class="card"><div class="card-title">Average</div><div class="card-number" id="resultAverage">0%</div></div><div class="card"><div class="card-title">Passed</div><div class="card-number" id="resultPassed">0</div></div><div class="card"><div class="card-title">Failed</div><div class="card-number" id="resultFailed">0</div></div></div><div class="table-box wide-table"><table><thead><tr><th>Sr.</th><th>Student ID</th><th>Name</th><th>Class</th><th>Section</th><th>Total</th><th>Max</th><th>%</th><th>Grade</th></tr></thead><tbody id="resultTable"></tbody></table></div></div></section>
+<section id="messages" class="page"><div class="page-header"><div><h1>💬 Online Chat</h1><p>Student ↔ Student और Student ↔ Admin messaging with attachments.</p></div></div><div class="chat-layout"><div class="panel chat-users" id="messageUsers"></div><div class="chat-window"><div class="chat-head" id="messageChatHead">Select a user</div><div class="chat-messages" id="messageList"></div><div class="chat-compose" style="align-items:flex-end"><textarea id="messageText" class="textarea" placeholder="Type your message..."></textarea><div style="display:flex;flex-direction:column;gap:6px;min-width:210px"><input id="messageFile" type="file" class="input" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"><div class="small">Photo/File: max 25 MB • Video: max 50 MB</div><button class="btn btn-primary" onclick="sendMessage()">Send ➤</button></div></div></div></div></section>
+
 <section id="fees" class="page"><div class="page-header"><div><h1>Fees Management</h1><p>Fee records, payment status and collection tracking.</p></div><button class="btn btn-primary" onclick="openFeeModal()">＋ Record Payment</button></div><div class="cards"><div class="card"><div class="card-title">Total Demand</div><div class="card-number" id="feeDemand">₹0</div></div><div class="card"><div class="card-title">Collected</div><div class="card-number" id="feeCollected">₹0</div></div><div class="card"><div class="card-title">Pending</div><div class="card-number" id="feePending">₹0</div></div><div class="card"><div class="card-title">Records</div><div class="card-number" id="feeRecords">0</div></div></div><div class="panel"><div class="table-header"><div class="panel-title">Fee Records</div><div class="search-box"><input id="feeSearch" class="input" placeholder="Search student..." oninput="renderFees()"></div></div><div class="table-box"><table><thead><tr><th>Receipt</th><th>Student</th><th>Class</th><th>Fee Head</th><th>Demand</th><th>Paid</th><th>Pending</th><th>Status</th><th>Date</th><th>Action</th></tr></thead><tbody id="feeTable"></tbody></table></div></div></section>
-<section id="reports" class="page"><div class="page-header"><div><h1>Reports</h1><p>Frontend reports generated from saved browser data.</p></div><div class="report-actions"><button class="btn btn-info" onclick="printReport('student')">🖨 Student Report</button><button class="btn btn-success" onclick="printReport('attendance')">🖨 Attendance Report</button><button class="btn btn-primary" onclick="printReport('marks')">🖨 Result Report</button><button class="btn btn-warning" onclick="printReport('fees')">🖨 Fee Report</button></div></div><div class="cards"><div class="card"><div class="card-title">Students</div><div class="card-number" id="rStudents">0</div></div><div class="card"><div class="card-title">Attendance %</div><div class="card-number" id="rAttendance">0%</div></div><div class="card"><div class="card-title">Average Result</div><div class="card-number" id="rMarks">0%</div></div><div class="card"><div class="card-title">Fee Pending</div><div class="card-number" id="rPending">₹0</div></div></div><div class="grid-2"><div class="panel"><div class="panel-title">Class-wise Students</div><div id="classReport"></div></div><div class="panel"><div class="panel-title">Academic Summary</div><div id="academicReport"></div></div></div></section>
+<section id="reports" class="page"><div class="page-header"><div><h1>Reports</h1><p>Online ERP reports and summaries.</p></div><div class="report-actions"><button class="btn btn-info" onclick="printReport('student')">🖨 Student Report</button><button class="btn btn-success" onclick="printReport('attendance')">🖨 Attendance Report</button><button class="btn btn-primary" onclick="printReport('marks')">🖨 Result Report</button><button class="btn btn-warning" onclick="printReport('fees')">🖨 Fee Report</button></div></div><div class="cards"><div class="card"><div class="card-title">Students</div><div class="card-number" id="rStudents">0</div></div><div class="card"><div class="card-title">Attendance %</div><div class="card-number" id="rAttendance">0%</div></div><div class="card"><div class="card-title">Average Result</div><div class="card-number" id="rMarks">0%</div></div><div class="card"><div class="card-title">Fee Pending</div><div class="card-number" id="rPending">₹0</div></div></div><div class="grid-2"><div class="panel"><div class="panel-title">Class-wise Students</div><div id="classReport"></div></div><div class="panel"><div class="panel-title">Academic Summary</div><div id="academicReport"></div></div></div></section>
 <section id="settings" class="page"><div class="page-header"><div><h1>Settings / Profile</h1><p>Manage institute profile and frontend data.</p></div></div><div class="settings-grid"><div class="panel"><div class="panel-title">Institute Profile</div><div class="form-grid" style="grid-template-columns:1fr 1fr"><div class="form-group"><label>Institute Name</label><input id="setName" class="input" value="Patanjali Gurukulam"></div><div class="form-group"><label>Academic Session</label><input id="setSession" class="input" value="2026-27"></div><div class="form-group form-full"><label>Address</label><textarea id="setAddress" class="textarea">Haridwar, Uttarakhand, India</textarea></div><div class="form-group"><label>Administrator</label><input id="setAdmin" class="input" value="Administrator"></div><div class="form-group"><label>Contact</label><input id="setContact" class="input" value="9876543210"></div></div><br><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div><div class="panel"><div class="panel-title">Data Management</div><p class="small">All data is stored locally in this browser. Use backup/export before clearing data.</p><br><div class="actions"><button class="btn btn-info" onclick="exportData()">⬇ Export Backup</button><label class="btn btn-success" style="display:inline-block">⬆ Import Backup<input type="file" id="importFile" accept="application/json" onchange="importData(event)" hidden></label><button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button></div><br><div class="notice">This frontend version is suitable for a single browser/device. For multi-user login, online database, cloud backup and role-based access, a backend will be needed later.</div></div><div class="panel admin-only" style="margin-top:20px"><div class="panel-title">🔐 Login Credentials</div><p class="small" style="margin-bottom:12px">Only Admin can edit login ID and password. New students use password 1234 by default.</p><div class="form-grid" style="grid-template-columns:1fr 1fr"><div class="form-group"><label>Admin Login ID</label><input id="authAdminId" class="input"></div><div class="form-group"><label>Admin Password</label><input id="authAdminPassword" type="password" class="input"></div></div><button class="btn btn-primary" style="margin-top:10px" onclick="saveAdminCredentials()">💾 Save Admin Login</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee"><div class="table-box"><table><thead><tr><th>Student ID</th><th>Student Name</th><th>Login ID</th><th>Password</th><th>Action</th></tr></thead><tbody id="studentLoginTable"></tbody></table></div></div></div></section>
 </main>
-<div class="modal" id="studentModal"><div class="modal-content"><div class="modal-header"><h3 id="studentModalTitle">Add Student</h3><span class="close" onclick="closeModal('studentModal')">×</span></div><div class="modal-body"><form onsubmit="saveStudent(event)"><input type="hidden" id="editStudentId"><div class="form-grid"><div class="form-group"><label>Student ID *</label><input id="sId" class="input" required></div><div class="form-group"><label>Student Name *</label><input id="sName" class="input" required></div><div class="form-group"><label>Father Name</label><input id="sFather" class="input"></div><div class="form-group"><label>Mother Name</label><input id="sMother" class="input"></div><div class="form-group"><label>Class *</label><select id="sClass" class="select" required><option value="">Select</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div class="form-group"><label>Section *</label><select id="sSection" class="select" required><option value="">Select</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div class="form-group"><label>Date of Birth</label><input id="sDob" class="input" type="date"></div><div class="form-group"><label>House</label><input id="sHouse" class="input" placeholder="e.g. Ganga House"></div><div class="form-group"><label>Mobile</label><input id="sMobile" class="input"></div><div class="form-group form-full"><label>Address</label><textarea id="sAddress" class="input" rows="3"></textarea></div></div><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal('studentModal')">Cancel</button><button class="btn btn-primary">Save Student</button></div></form></div></div></div>
-<div class="modal" id="marksModal"><div class="modal-content"><div class="modal-header"><h3>Enter Marks</h3><span class="close" onclick="closeModal('marksModal')">×</span></div><div class="modal-body"><form onsubmit="saveMarksForm(event)"><div class="form-grid"><div class="form-group"><label>Student</label><select id="mStudent" class="select" required></select></div><div class="form-group"><label>Exam</label><select id="mExam" class="select"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div class="form-group"><label>English /100</label><input id="mEnglish" class="input" type="number" min="0" max="100" value="0"></div><div class="form-group"><label>Maths /100</label><input id="mMaths" class="input" type="number" min="0" max="100" value="0"></div><div class="form-group"><label>Science /100</label><input id="mScience" class="input" type="number" min="0" max="100" value="0"></div><div class="form-group"><label>Sanskrit /100</label><input id="mSanskrit" class="input" type="number" min="0" max="100" value="0"></div><div class="form-group"><label>Social Science /100</label><input id="mSocial" class="input" type="number" min="0" max="100" value="0"></div></div><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal('marksModal')">Cancel</button><button class="btn btn-primary">Save Marks</button></div></form></div></div></div>
-<div class="modal" id="feeModal"><div class="modal-content"><div class="modal-header"><h3>Record Fee Payment</h3><span class="close" onclick="closeModal('feeModal')">×</span></div><div class="modal-body"><form onsubmit="saveFee(event)"><div class="form-grid"><div class="form-group"><label>Student</label><select id="fStudent" class="select" required></select></div><div class="form-group"><label>Fee Head</label><select id="fHead" class="select"><option>Tuition Fee</option><option>Hostel Fee</option><option>Transport Fee</option><option>Examination Fee</option><option>Other Fee</option></select></div><div class="form-group"><label>Total Demand</label><input id="fDemand" class="input" type="number" min="0" value="0" required></div><div class="form-group"><label>Paid Amount</label><input id="fPaid" class="input" type="number" min="0" value="0" required></div><div class="form-group"><label>Payment Date</label><input id="fDate" class="input" type="date" required></div><div class="form-group"><label>Payment Mode</label><select id="fMode" class="select"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option></select></div></div><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal('feeModal')">Cancel</button><button class="btn btn-primary">Save Payment</button></div></form></div></div></div>
+<div class="modal" id="studentModal"><div class="modal-content"><div class="modal-header"><h3 id="studentModalTitle">Add Student</h3><span class="close" onclick="closeModal('studentModal')">×</span></div><div class="modal-body"><form onsubmit="saveStudent(event)"><input type="hidden" id="editStudentId"><div class="form-grid"><div class="form-group"><label>Student ID *</label><input id="sId" class="input" required></div><div class="form-group"><label>Student Name *</label><input id="sName" class="input" required></div><div class="form-group"><label>Father Name</label><input id="sFather" class="input"></div><div class="form-group"><label>Mother Name</label><input id="sMother" class="input"></div><div class="form-group"><label>Class *</label><select id="sClass" class="select" required><option value="">Select</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div class="form-group"><label>Section *</label><select id="sSection" class="select" required><option value="">Select</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div class="form-group"><label>Date of Birth</label><input id="sDob" class="input" type="date"></div><div class="form-group"><label>House</label><input id="sHouse" class="input" placeholder="e.g. Ganga House"></div><div class="form-group"><label>Mobile</label><input id="sMobile" class="input"></div><div class="form-group form-full"><label>Address</label><textarea id="sAddress" class="input" rows="3"></textarea></div></div><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal('studentModal')">Cancel</button><button class="btn btn-primary">Save Student</button></div></form></div></div></div>
+<div class="modal" id="marksModal"><div class="modal-content" style="max-width:900px"><div class="modal-header"><h3>Enter / Edit Marks</h3><span class="close" onclick="closeModal('marksModal')">×</span></div><div class="modal-body"><form onsubmit="saveMarksForm(event)"><div class="form-grid"><div class="form-group"><label>Student</label><select id="mStudent" class="select" required></select></div><div class="form-group"><label>Exam</label><select id="mExam" class="select"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div id="marksInputGrid" class="form-grid form-full" style="grid-template-columns:repeat(3,1fr);gap:12px"></div></div><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal('marksModal')">Cancel</button><button class="btn btn-primary">Save Marks</button></div></form></div></div></div><div class="modal" id="feeModal"><div class="modal-content"><div class="modal-header"><h3>Record Fee Payment</h3><span class="close" onclick="closeModal('feeModal')">×</span></div><div class="modal-body"><form onsubmit="saveFee(event)"><div class="form-grid"><div class="form-group"><label>Student</label><select id="fStudent" class="select" required></select></div><div class="form-group"><label>Fee Head</label><select id="fHead" class="select"><option>Tuition Fee</option><option>Hostel Fee</option><option>Transport Fee</option><option>Examination Fee</option><option>Other Fee</option></select></div><div class="form-group"><label>Total Demand</label><input id="fDemand" class="input" type="number" min="0" value="0" required></div><div class="form-group"><label>Paid Amount</label><input id="fPaid" class="input" type="number" min="0" value="0" required></div><div class="form-group"><label>Payment Date</label><input id="fDate" class="input" type="date" required></div><div class="form-group"><label>Payment Mode</label><select id="fMode" class="select"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option></select></div></div><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal('feeModal')">Cancel</button><button class="btn btn-primary">Save Payment</button></div></form></div></div></div>
 <div class="modal" id="viewModal"><div class="modal-content"><div class="modal-header"><h3>Student Profile</h3><span class="close" onclick="closeModal('viewModal')">×</span></div><div class="modal-body" id="profileBody"></div></div></div>
 <div id="message" class="message"></div>
 <script>
 const KEY={students:'PG_STUDENTS',attendance:'PG_ATTENDANCE',marks:'PG_MARKS',fees:'PG_FEES',settings:'PG_SETTINGS'};
-const subjects=['English','Maths','Science','Sanskrit','Social'];
+const subjects=['Math','English','Science','Social Science','Hindi','Sanskrit','Sanskrit Sahitya','Sanskrit Vyakaran','Shastra','Web Application','Political Science','History','Economics','Yoga','Physical Education','Music','IT'];
 let auth=load('PG_AUTH',{adminId:'admin',adminPassword:'1234'});let currentRole=localStorage.getItem('PG_LOGIN_ROLE')||'';let currentStudentId=localStorage.getItem('PG_LOGIN_STUDENT_ID')||'';let loginRole='admin';
 function selectLoginRole(role){loginRole=role;document.getElementById('adminTab').classList.toggle('active',role==='admin');document.getElementById('studentTab').classList.toggle('active',role==='student');document.getElementById('loginIdLabel').textContent=role==='admin'?'Admin ID':'Student ID';document.getElementById('loginId').placeholder=role==='admin'?'Enter Admin ID':'Enter Student ID';document.getElementById('loginHelp').style.display='none';document.getElementById('loginError').textContent='';}
 function doLogin(){let id=document.getElementById('loginId').value.trim(),pw=document.getElementById('loginPassword').value.trim(),err=document.getElementById('loginError');if(loginRole==='admin'){if(id.toLowerCase()!==String(auth.adminId||'admin').toLowerCase()){err.textContent='❌ Admin ID गलत है।';return}if(pw!==String(auth.adminPassword||'1234')){err.textContent='❌ Password गलत है।';return}currentRole='admin';currentStudentId='';}else{let s=students.find(x=>String(x.id).toLowerCase()===id.toLowerCase());if(!s){err.textContent='❌ Student ID नहीं मिला।';return}if(pw!==String(s.password||'1234')){err.textContent='❌ Password गलत है।';return}currentRole='student';currentStudentId=s.id;}localStorage.setItem('PG_LOGIN_ROLE',currentRole);localStorage.setItem('PG_LOGIN_STUDENT_ID',currentStudentId);document.getElementById('loginScreen').style.display='none';applyRolePermissions();toast(currentRole==='admin'?'Admin login successful':'Student login successful');}
@@ -98,7 +129,7 @@ function load(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){re
 function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
 function toast(t){const m=document.getElementById('message');m.textContent=t;m.classList.add('show');setTimeout(()=>m.classList.remove('show'),2200)}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
-function showPage(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('sidebar').classList.remove('open');if(id==='students')renderStudents();if(id==='attendance')renderAttendance();if(id==='marks')renderMarks();if(id==='fees')renderFees();if(id==='reports')renderReports();if(id==='settings')loadSettings()}
+function showPage(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const page=document.getElementById(id);if(!page)return;page.classList.add('active');document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('sidebar').classList.remove('open');if(id==='students')renderStudents();if(id==='attendance')renderAttendance();if(id==='marks')renderMarks();if(id==='uploadMarks')initUploadMarksPage();if(id==='results')renderResultPage();if(id==='fees')renderFees();if(id==='reports')renderReports();if(id==='messages')renderMessages();if(id==='settings')loadSettings()}
 function showPageById(id){const nav=[...document.querySelectorAll('.nav-item')].find(x=>x.getAttribute('onclick')?.includes("'"+id+"'"));showPage(id,nav)}
 function openModal(id){document.getElementById(id).classList.add('show')}function closeModal(id){document.getElementById(id).classList.remove('show')}
 function openStudentModal(id=''){if(!requireAdmin())return;document.getElementById('studentModalTitle').textContent=id?'Edit Student':'Add Student';document.getElementById('editStudentId').value=id;let s=students.find(x=>x.id===id);document.getElementById('sId').value=s?.id||'PG'+new Date().getFullYear()+String(Date.now()).slice(-5);document.getElementById('sName').value=s?.name||'';document.getElementById('sFather').value=s?.father||'';document.getElementById('sMother').value=s?.mother||'';document.getElementById('sClass').value=s?.className||'';document.getElementById('sSection').value=s?.section||'';document.getElementById('sMobile').value=s?.mobile||'';document.getElementById('sAddress').value=s?.address||'';openModal('studentModal')}
@@ -129,7 +160,9 @@ function saveFee(e){if(!requireAdmin())return;e.preventDefault();let demand=+doc
 function renderFees(){let q=document.getElementById('feeSearch').value.toLowerCase(),visibleIds=new Set(getVisibleStudents().map(s=>s.id)),arr=fees.filter(f=>visibleIds.has(f.studentId)).filter(f=>{let s=students.find(x=>x.id===f.studentId);return !q||`${s?.name||''} ${f.studentId}`.toLowerCase().includes(q)});document.getElementById('feeTable').innerHTML=arr.length?arr.map(f=>{let s=students.find(x=>x.id===f.studentId),pending=Math.max(0,f.demand-f.paid),status=pending===0?'Paid':f.paid>0?'Partial':'Unpaid';return `<tr><td>${f.receipt}</td><td>${s?.name||'Deleted'}</td><td>${s?.className||'-'}-${s?.section||'-'}</td><td>${f.head}</td><td>₹${f.demand}</td><td>₹${f.paid}</td><td>₹${pending}</td><td><span class="badge ${status.toLowerCase()}">${status}</span></td><td>${f.date}</td><td><button class="btn btn-danger btn-sm" onclick="deleteFee('${f.receipt}')">Delete</button></td></tr>`}).join(''):`<tr><td colspan="10" class="empty">No fee records found.</td></tr>`;let demand=fees.reduce((a,f)=>a+f.demand,0),paid=fees.reduce((a,f)=>a+f.paid,0);document.getElementById('feeDemand').textContent='₹'+demand;document.getElementById('feeCollected').textContent='₹'+paid;document.getElementById('feePending').textContent='₹'+Math.max(0,demand-paid);document.getElementById('feeRecords').textContent=fees.length}
 function deleteFee(r){if(!requireAdmin())return;fees=fees.filter(f=>f.receipt!==r);save(KEY.fees,fees);renderFees();refreshAll();toast('Fee record deleted')}
 function renderReports(){let visible=getVisibleStudents(),visibleIds=new Set(visible.map(s=>s.id));document.getElementById('rStudents').textContent=visible.length;let statuses=currentRole==='student'?Object.values(attendance).flatMap(x=>Object.entries(x).filter(([id])=>visibleIds.has(id)).map(([,st])=>st)):Object.values(attendance).flatMap(x=>Object.values(x)),p=statuses.filter(x=>x==='Present').length;document.getElementById('rAttendance').textContent=(statuses.length?(p/statuses.length*100):0).toFixed(1)+'%';let av=marks.filter(m=>visibleIds.has(m.studentId)).map(calcMark);document.getElementById('rMarks').textContent=(av.length?av.reduce((a,x)=>a+x.pct,0)/av.length:0).toFixed(1)+'%';let pending=fees.filter(f=>visibleIds.has(f.studentId)).reduce((a,f)=>a+Math.max(0,f.demand-f.paid),0);document.getElementById('rPending').textContent='₹'+pending;let cls={};visible.forEach(s=>cls[s.className]=(cls[s.className]||0)+1);document.getElementById('classReport').innerHTML=Object.keys(cls).sort((a,b)=>a-b).map(c=>`<p style="margin:10px 0">Class ${c}: <b>${cls[c]}</b> students</p>`).join('')||'<div class="empty">No data</div>';let grades={};av.forEach(x=>grades[x.grade]=(grades[x.grade]||0)+1);document.getElementById('academicReport').innerHTML=Object.keys(grades).map(g=>`<p style="margin:10px 0">Grade ${g}: <b>${grades[g]}</b> record(s)</p>`).join('')||'<div class="empty">No marks data</div>'}
-function printReport(type){let title={student:'Student Report',attendance:'Attendance Report',marks:'Result Report',fees:'Fee Report'}[type],body='';if(type==='student')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Roll No</th><th>ID</th><th>Name</th><th>Class</th><th>Section</th><th>Mobile</th></tr>'+students.map(s=>`<tr><td>${s.rollNo||''}</td><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${s.section}</td><td>${s.mobile||''}</td></tr>`).join('')+'</table>';if(type==='marks')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Student</th><th>Exam</th><th>Total</th><th>%</th><th>Grade</th></tr>'+marks.map(m=>{let s=visible.find(x=>x.id===m.studentId),x=calcMark(m);return `<tr><td>${s?.name||m.studentId}</td><td>${m.exam}</td><td>${x.total}/500</td><td>${x.pct.toFixed(1)}%</td><td>${x.grade}</td></tr>`}).join('')+'</table>';if(type==='attendance')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Date</th><th>Student</th><th>Status</th></tr>'+Object.entries(attendance).flatMap(([date,d])=>Object.entries(d).map(([id,st])=>`<tr><td>${date}</td><td>${visible.find(s=>s.id===id)?.name||id}</td><td>${st}</td></tr>`)).join('')+'</table>';if(type==='fees')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Receipt</th><th>Student</th><th>Head</th><th>Demand</th><th>Paid</th><th>Pending</th></tr>'+fees.map(f=>`<tr><td>${f.receipt}</td><td>${visible.find(s=>s.id===f.studentId)?.name||f.studentId}</td><td>${f.head}</td><td>₹${f.demand}</td><td>₹${f.paid}</td><td>₹${Math.max(0,f.demand-f.paid)}</td></tr>`).join('')+'</table>';let w=window.open('','_blank');w.document.write(`<html><head><title>${title}</title><style>body{font-family:Arial;padding:30px}h1{color:#b71c1c}table{border-collapse:collapse;margin-top:20px}th{background:#eee}</style></head><body><h1>Patanjali Gurukulam</h1><h2>${title}</h2><p>Generated: ${new Date().toLocaleString()}</p>${body}</body></html>`);w.document.close();w.print()}
+function printReport(type){let title={student:'Student Report',attendance:'Attendance Report',marks:'Result Report',fees:'Fee Report'}[type],body='';if(type==='student')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Roll No</th><th>ID</th><th>Name</th><th>Class</th><th>Section</th><th>Mobile</th></tr>'+students.map(s=>`<tr><td>${s.rollNo||''}</td><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${s.section}</td><td>${s.mobile||''}</td></tr>`).join('')+'</table>';if(type==='marks')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Student</th><th>Exam</th><th>Total</th><th>%</th><th>Grade</th></tr>'+marks.map(m=>{let s=visible.find(x=>x.id===m.studentId),x=calcMark(m);return `<tr><td>${s?.name||m.studentId}</td><td>${m.exam}</td><td>${x.total}/500</td><td>${x.pct.toFixed(1)}%</td><td>${x.grade}</td></tr>`}).join('')+'</table>';if(type==='attendance')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Date</th><th>Student</th><th>Status</th></tr>'+Object.entries(attendance).flatMap(([date,d])=>Object.entries(d).map(([id,st])=>`<tr><td>${date}</td><td>${visible.find(s=>s.id===id)?.name||id}</td><td>${st}</td></tr>`)).join('')+'</table>';if(type==='fees')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Receipt</th><th>Student</th><th>Head</th><th>Demand</th><th>Paid</th><th>Pending</th></tr>'+fees.map(f=>`<tr><td>${f.receipt}</td><td>${visible.find(s=>s.id===f.studentId)?.name||f.studentId}</td><td>${f.head}</td><td>₹${f.demand}</td><td>₹${f.paid}</td><td>₹${Math.max(0,f.demand-f.paid)}</td></tr>`).join('')+'</table>';let w=window.open('','_blank');w.document.write(`<html><head><title>${title}</title><style>body{font-family:Arial;padding:30px}h1{color:#b71c1c}table{border-collapse:collapse;margin-top:20px}th{background:#eee}</style></head><body><h1>Patanjali Gurukulam</h1><h2>${title}</h2><p>Generated: ${new Date().toLocaleString()}</p>${body}
+
+</body></html>`);w.document.close();w.print()}
 function renderLoginCredentials(){if(currentRole!=='admin')return;document.getElementById('authAdminId').value=auth.adminId||'admin';document.getElementById('authAdminPassword').value=auth.adminPassword||'1234';document.getElementById('studentLoginTable').innerHTML=students.map((s,i)=>`<tr><td><input class="input" id="loginId_${i}" value="${escapeHtml(s.id||'')}" style="min-width:150px"></td><td>${escapeHtml(s.name||'')}</td><td>${escapeHtml(s.id||'')}</td><td><input class="input" id="loginPw_${i}" type="text" value="${escapeHtml(s.password||'1234')}" style="min-width:120px"></td><td><button class="btn btn-success btn-sm" onclick="saveStudentLogin(${i})">Save</button></td></tr>`).join('')||`<tr><td colspan="5" class="empty">No students found.</td></tr>`;}
 function saveAdminCredentials(){if(!requireAdmin())return;let id=document.getElementById('authAdminId').value.trim(),pw=document.getElementById('authAdminPassword').value;if(!id||!pw){toast('Admin ID और password required');return}auth={adminId:id,adminPassword:pw};save('PG_AUTH',auth);toast('Admin login updated')}
 function saveStudentLogin(index){if(!requireAdmin())return;let s=students[index];if(!s)return;let newId=document.getElementById('loginId_'+index).value.trim(),pw=document.getElementById('loginPw_'+index).value;if(!newId||!pw){toast('Student ID और password required');return}if(students.some((x,i)=>i!==index&&String(x.id).toLowerCase()===newId.toLowerCase())){toast('Student ID already exists');return}let oldId=s.id;s.id=newId;s.password=pw;attendance=renameAttendanceStudentId(attendance,oldId,newId);marks.forEach(m=>{if(m.studentId===oldId)m.studentId=newId});fees.forEach(f=>{if(f.studentId===oldId)f.studentId=newId});save(KEY.students,students);save(KEY.attendance,attendance);save(KEY.marks,marks);save(KEY.fees,fees);renderLoginCredentials();renderStudents();refreshAll();toast('Student login updated')}
@@ -138,16 +171,16 @@ function loadSettings(){let s=settings||{};document.getElementById('setName').va
 function saveSettings(){if(!requireAdmin())return;settings={name:document.getElementById('setName').value,session:document.getElementById('setSession').value,address:document.getElementById('setAddress').value,admin:document.getElementById('setAdmin').value,contact:document.getElementById('setContact').value};save(KEY.settings,settings);toast('Settings saved')}
 function normalizeBulkHeader(v){return String(v??'').trim().toLowerCase().replace(/[\s_\-\.\/()]+/g,'')}
 function bulkValue(row,names){let keys=Object.keys(row);for(let n of names){let k=normalizeBulkHeader(n),hit=keys.find(x=>normalizeBulkHeader(x)===k);if(hit!==undefined&&row[hit]!==undefined&&row[hit]!==null&&String(row[hit]).trim()!=='')return String(row[hit]).trim()}return ''}
-function classFromSheet(name){let m=String(name||'').match(/(?:class|std|grade|कक्षा)\s*[-_ ]?\s*(6|7|8|9|10|11|12)/i);return m?m[1]:''}
+function classFromSheet(name){let m=String(name||'').match(/(?:class|std|grade|कक्षा)\s*[-_ ]?\s*(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|1|2|3|4|5|6|7|8|9|10|11|12)\b/i);return m?m[1]:''}
 let bulkStudentsPreview=[];
 function normalizeHeader(v){return String(v??'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');}
-function normalizeClassValue(v){let x=String(v??'').trim().toUpperCase();let m=x.match(/(?:CLASS|STD|GRADE)?\s*(VI{0,2}|IV|IX|XII|XI|X|VII|VIII|V|VI|[6-9]|1[0-2])\b/);if(!m)return '';let z=m[1];let map={'6':'VI','7':'VII','8':'VIII','9':'IX','10':'X','11':'XI','12':'XII','VI':'VI','VII':'VII','VIII':'VIII','IX':'IX','X':'X','XI':'XI','XII':'XII'};return map[z]||'';}
+function normalizeClassValue(v){let x=String(v??'').trim().toUpperCase().replace(/^CLASS\s*/,'').replace(/^STD\s*/,'').replace(/^GRADE\s*/,'');let map={'1':'I','2':'II','3':'III','4':'IV','5':'V','6':'VI','7':'VII','8':'VIII','9':'IX','10':'X','11':'XI','12':'XII','I':'I','II':'II','III':'III','IV':'IV','V':'V','VI':'VI','VII':'VII','VIII':'VIII','IX':'IX','X':'X','XI':'XI','XII':'XII'};return map[x]||'';}
 function normalizeSectionValue(v){let m=String(v??'').toUpperCase().match(/\b([A-J])\b/);return m?m[1]:'';}
 function parseBulkRows(rows,sheet){return rows.map(r=>{const keys=Object.keys(r);const find=(names)=>{const targets=names.map(normalizeHeader);const k=keys.find(h=>targets.includes(normalizeHeader(h)));return k!==undefined?String(r[k]??'').trim():''};const id=find(['Student ID','ID','StudentID','Admission No','Admission Number','Registration No']);const name=find(['Name','Student Name','StudentName','Full Name','Student']);const father=find(['Father Name','Father','FatherName']);const mother=find(['Mother Name','Mother','MotherName']);const dob=find(['Date of Birth','DOB','DateOfBirth','Birth Date']);const house=find(['House']);const cls=normalizeClassValue(find(['Class','Class Name','ClassName','Grade','Standard','Std']));const sec=normalizeSectionValue(find(['Section','Section Name','SectionName','Stream']));const mobile=find(['Mobile','Mobile Number','Phone','Contact','Contact Number','MobileNo']);const address=find(['Address','Permanent Address']);return{id,name,father,mother,dob,house,className:cls,section:sec,mobile,address};}).filter(x=>x.id||x.name)}
 function generateStudentId(){let n=students.reduce((m,s)=>{let q=String(s.id||'').match(/(\d+)$/);return q?Math.max(m,parseInt(q[1],10)):m},0)+1;let id='PG'+String(n).padStart(6,'0');while(students.some(s=>s.id===id)){n++;id='PG'+String(n).padStart(6,'0')}return id;}
 function previewBulkStudents(e){let file=e.target.files?.[0];if(!file)return;bulkStudentsPreview=[];let ext=file.name.split('.').pop().toLowerCase();let reader=new FileReader();reader.onload=function(ev){try{let rows=[];if(ext==='csv'){let text=new TextDecoder('utf-8').decode(ev.target.result);let lines=text.split(/\r?\n/).filter(x=>x.trim());if(!lines.length)throw new Error('CSV empty');let delim=lines[0].includes('\t')?'\t':',';let headers=lines[0].split(delim).map(x=>x.replace(/^"|"$/g,'').trim());rows=lines.slice(1).map(line=>{let vals=line.split(delim).map(x=>x.replace(/^"|"$/g,'').trim());let o={};headers.forEach((h,i)=>o[h]=vals[i]??'');return o});bulkStudentsPreview=parseBulkRows(rows,'CSV')}else{if(typeof XLSX==='undefined')throw new Error('Excel reader load नहीं हुआ। Internet on करके file फिर चुनें।');let wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});wb.SheetNames.forEach(sn=>{let data=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:''});bulkStudentsPreview.push(...parseBulkRows(data,sn))});}renderBulkPreview()}catch(err){toast('File read error: '+err.message)}};reader.readAsArrayBuffer(file)}
 function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-function renderBulkPreview(){let box=document.getElementById('bulkPreview'),actions=document.getElementById('bulkImportActions');if(!bulkStudentsPreview.length){box.innerHTML='<div class="empty">No student rows found.</div>';actions.style.display='none';return}let seen=new Set(),valid=0;let rows=bulkStudentsPreview.map((s,i)=>{let duplicate=s.id&&students.some(x=>x.id===s.id);let repeated=s.id&&seen.has(s.id);if(s.id)seen.add(s.id);let missing=[];if(!s.name)missing.push('Name');if(!s.id)missing.push('ID');if(!s.className)missing.push('Class');if(!s.section)missing.push('Section');if(s.className&&!['VI','VII','VIII','IX','X','XI','XII'].includes(s.className))missing.push('Class VI-XII');if(s.section&&!/^[A-J]$/.test(s.section))missing.push('Section A-J');let ok=!missing.length&&!repeated&&(document.getElementById('bulkMode').value==='update'||!duplicate);if(ok)valid++;let status=missing.length?'Missing/Invalid: '+missing.join(', '):(repeated?'Duplicate in file':(duplicate?'Existing ID':'Ready'));let cls=missing.length||repeated?'bulk-bad':duplicate?'bulk-warn':'bulk-ok';return `<tr><td>${i+1}</td><td>${escapeHtml(s.id)}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.father)}</td><td>${escapeHtml(s.className)}</td><td>${escapeHtml(s.section)}</td><td>${escapeHtml(s.house)}</td><td>${escapeHtml(s.dob)}</td><td class="${cls}">${status}</td></tr>`}).join('');box.innerHTML=`<div class="small" style="margin-bottom:8px"><b>${bulkStudentsPreview.length}</b> rows found. Ready to import: <b>${valid}</b></div><div class="table-box"><table><thead><tr><th>#</th><th>ID</th><th>Name</th><th>Father</th><th>Class</th><th>Section</th><th>House</th><th>DOB</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;actions.style.display='flex'}
+function renderBulkPreview(){let box=document.getElementById('bulkPreview'),actions=document.getElementById('bulkImportActions');if(!bulkStudentsPreview.length){box.innerHTML='<div class="empty">No student rows found.</div>';actions.style.display='none';return}let seen=new Set(),valid=0;let rows=bulkStudentsPreview.map((s,i)=>{let duplicate=s.id&&students.some(x=>x.id===s.id);let repeated=s.id&&seen.has(s.id);if(s.id)seen.add(s.id);let missing=[];if(!s.name)missing.push('Name');if(!s.id)missing.push('ID');if(!s.className)missing.push('Class');if(!s.section)missing.push('Section');if(s.className&&!['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'].includes(s.className))missing.push('Class I-XII');if(s.section&&!/^[A-J]$/.test(s.section))missing.push('Section A-J');let ok=!missing.length&&!repeated&&(document.getElementById('bulkMode').value==='update'||!duplicate);if(ok)valid++;let status=missing.length?'Missing/Invalid: '+missing.join(', '):(repeated?'Duplicate in file':(duplicate?'Existing ID':'Ready'));let cls=missing.length||repeated?'bulk-bad':duplicate?'bulk-warn':'bulk-ok';return `<tr><td>${i+1}</td><td>${escapeHtml(s.id)}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.father)}</td><td>${escapeHtml(s.className)}</td><td>${escapeHtml(s.section)}</td><td>${escapeHtml(s.house)}</td><td>${escapeHtml(s.dob)}</td><td class="${cls}">${status}</td></tr>`}).join('');box.innerHTML=`<div class="small" style="margin-bottom:8px"><b>${bulkStudentsPreview.length}</b> rows found. Ready to import: <b>${valid}</b></div><div class="table-box"><table><thead><tr><th>#</th><th>ID</th><th>Name</th><th>Father</th><th>Class</th><th>Section</th><th>House</th><th>DOB</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;actions.style.display='flex'}
 function previewPastedBulkStudents(){if(!requireAdmin())return;let text=document.getElementById('bulkPasteData').value.trim();if(!text)return toast('पहले Excel data paste करें');try{let lines=text.split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw new Error('Header और कम से कम 1 student row चाहिए');let delim=lines[0].includes('\t')?'\t':',';let headers=lines[0].split(delim).map(x=>x.replace(/^"|"$/g,'').trim());let rows=lines.slice(1).map(line=>{let vals=line.split(delim).map(x=>x.replace(/^"|"$/g,'').trim());let o={};headers.forEach((h,i)=>o[h]=vals[i]??'');return o});bulkStudentsPreview=parseBulkRows(rows,'Pasted Data');renderBulkPreview();toast('Pasted data preview तैयार है')}catch(err){toast('Paste data error: '+err.message)}}
 function clearPastedBulkStudents(){document.getElementById('bulkPasteData').value='';clearBulkPreview()}
 function importBulkStudents(){if(!requireAdmin())return;if(!bulkStudentsPreview.length)return toast('पहले data paste/upload करके Preview करें');let mode=document.getElementById('bulkMode').value,added=0,updated=0,skipped=0;let seen=new Set();bulkStudentsPreview.forEach(s=>{let id=String(s.id||'').trim()||generateStudentId();let name=String(s.name||'').trim();let cls=normalizeClassValue(s.className);let sec=normalizeSectionValue(s.section);if(!name||!cls||!sec||seen.has(id)){skipped++;return}seen.add(id);let obj={id,name,father:s.father||'',mother:s.mother||'',dob:s.dob||'',house:s.house||'',className:cls,section:sec,mobile:s.mobile||'',address:s.address||''};let i=students.findIndex(x=>String(x.id).toUpperCase()===id.toUpperCase());if(i>=0){if(mode==='update'){students[i]={...students[i],...obj};updated++}else skipped++}else{students.push(obj);added++}});save(KEY.students,students);bulkStudentsPreview=[];let f=document.getElementById('studentBulkFile');if(f)f.value='';document.getElementById('bulkPreview').innerHTML=`<div class="notice">✅ Import complete: <b>${added}</b> added, <b>${updated}</b> updated, <b>${skipped}</b> skipped.</div>`;document.getElementById('bulkImportActions').style.display='none';renderStudents();refreshAll();toast(`${added+updated} students imported`) }
@@ -1215,5 +1248,398 @@ setTimeout(async()=>{
     };
 
 })();
+</script>
+<script>
+/* =========================================================
+   PATANJALI ERP ADVANCED UPGRADE
+   Messaging + 17 subjects + Marks Upload + Downloads
+========================================================= */
+(function(){
+  const SUBJECTS=[
+    ['Math','math'],['English','english'],['Science','science'],['Social Science','socialScience'],
+    ['Hindi','hindi'],['Sanskrit','sanskrit'],['Sanskrit Sahitya','sanskritSahitya'],['Sanskrit Vyakaran','sanskritVyakaran'],
+    ['Shastra','shastra'],['Web Application','webApplication'],['Political Science','politicalScience'],['History','history'],
+    ['Economics','economics'],['Yoga','yoga'],['Physical Education','physicalEducation'],['Music','music'],['IT','it']
+  ];
+  window.PG_SUBJECTS=SUBJECTS;
+  let selectedChatStudent='';
+
+  function keyFor(name){ const x=SUBJECTS.find(a=>a[0]===name); return x?x[1]:name.replace(/[^a-z0-9]/gi,'').toLowerCase(); }
+  function getVal(m,key){
+    if(!m) return 0;
+    if(key==='math') return +(m.math ?? m.maths ?? 0)||0;
+    if(key==='socialScience') return +(m.socialScience ?? m.social ?? 0)||0;
+    return +(m[key] ?? 0)||0;
+  }
+  function safeName(id){return (window.students||[]).find(s=>String(s.id)===String(id))?.name||id;}
+  function visible(){return typeof getVisibleStudents==='function'?getVisibleStudents():(window.students||[]);}
+
+  window.calcMark=function(m){
+    let total=0,count=0;
+    SUBJECTS.forEach(([n,k])=>{
+      const present = k==='math' ? (Object.prototype.hasOwnProperty.call(m||{},'math')||Object.prototype.hasOwnProperty.call(m||{},'maths')) :
+        k==='socialScience' ? (Object.prototype.hasOwnProperty.call(m||{},'socialScience')||Object.prototype.hasOwnProperty.call(m||{},'social')) :
+        Object.prototype.hasOwnProperty.call(m||{},k);
+      if(present){ total+=getVal(m,k); count++; }
+    });
+    const max=count*100; const pct=max?total/max*100:0;
+    const grade=pct>=90?'A+':pct>=80?'A':pct>=70?'B+':pct>=60?'B':pct>=50?'C':pct>=33?'D':'F';
+    return {total,pct,grade,max,subjectsCount:count};
+  };
+  window.markObj=function(studentId,exam){return (window.marks||[]).find(m=>String(m.studentId)===String(studentId)&&String(m.exam)===String(exam));};
+
+  function subjectInputs(){
+    const box=document.getElementById('marksInputGrid'); if(!box)return;
+    box.innerHTML=SUBJECTS.map(([name,key])=>`<div class="form-group"><label>${name} /100</label><input id="m_${key}" class="input mark-input" type="number" min="0" max="100" value="0"></div>`).join('');
+  }
+  subjectInputs();
+
+  window.renderMarks=function(){
+    const exam=document.getElementById('markExam')?.value||'Unit Test 1',c=document.getElementById('markClass')?.value||'',sec=document.getElementById('markSection')?.value||'',q=(document.getElementById('markSearch')?.value||'').toLowerCase();
+    const arr=visible().filter(s=>(!c||s.className===c)&&(!sec||s.section===sec)&&(!q||`${s.id} ${s.name}`.toLowerCase().includes(q)));
+    const tb=document.getElementById('marksTable'); if(!tb)return;
+    tb.innerHTML=arr.length?arr.map(s=>{
+      const m=window.markObj(s.id,exam)||{}; const x=window.calcMark(m);
+      const vals=SUBJECTS.map(([n,k])=>getVal(m,k));
+      return `<tr><td><b>${escapeHtml(s.name||'')}</b><br><span class="small">${escapeHtml(s.id||'')}</span></td><td>${escapeHtml(s.className||'')}-${escapeHtml(s.section||'')}</td>${vals.map(v=>`<td>${v}</td>`).join('')}<td>${x.total}/${x.max||0}</td><td>${x.pct.toFixed(1)}%</td><td class="${x.grade==='F'?'result-bad':'result-good'}">${x.grade}</td><td><button class="btn btn-warning btn-sm" onclick="openMarksModal('${String(s.id).replace(/'/g,"\\'")}','${String(exam).replace(/'/g,"\\'")}')">Edit</button></td></tr>`;
+    }).join(''):`<tr><td colspan="23" class="empty">No students found.</td></tr>`;
+  };
+
+  window.openMarksModal=function(id='',exam=''){
+    subjectInputs();
+    const sel=document.getElementById('mStudent'); if(!sel)return;
+    sel.innerHTML=(window.students||[]).map(s=>`<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)} — ${escapeHtml(s.id)}</option>`).join('');
+    if(id)sel.value=id;
+    document.getElementById('mExam').value=exam||document.getElementById('markExam')?.value||'Unit Test 1';
+    window.fillMarksForm(); openModal('marksModal');
+  };
+  window.fillMarksForm=function(){
+    const m=window.markObj(document.getElementById('mStudent')?.value,document.getElementById('mExam')?.value)||{};
+    SUBJECTS.forEach(([n,k])=>{const el=document.getElementById('m_'+k); if(el)el.value=getVal(m,k);});
+  };
+  window.saveMarksForm=async function(e){
+    if(e)e.preventDefault(); if(typeof requireAdmin==='function'&&!requireAdmin())return;
+    const studentId=document.getElementById('mStudent').value, exam=document.getElementById('mExam').value;
+    const obj={studentId,exam}; SUBJECTS.forEach(([n,k])=>obj[k]=Math.max(0,Math.min(100,+document.getElementById('m_'+k).value||0)));
+    const i=(window.marks||[]).findIndex(m=>String(m.studentId)===String(studentId)&&String(m.exam)===String(exam));
+    if(i>=0)window.marks[i]=obj;else window.marks.push(obj);
+    localStorage.setItem(KEY.marks,JSON.stringify(window.marks));
+    closeModal('marksModal'); renderMarks(); if(typeof refreshAll==='function')refreshAll(); toast('Marks saved');
+    try{await window.firebaseAcademicAPI?.saveMark(obj);toast('☁️ Marks online saved')}catch(err){console.error(err)}
+  };
+  window.saveMarks=async function(){if(typeof requireAdmin==='function'&&!requireAdmin())return;localStorage.setItem(KEY.marks,JSON.stringify(window.marks));renderMarks();if(typeof refreshAll==='function')refreshAll();try{await window.firebaseAcademicAPI?.saveAllMarks(window.marks)}catch(e){}toast('Marks saved successfully')};
+
+  window.initUploadMarksPage=function(){
+    const sel=document.getElementById('uploadMarkSubject'); if(!sel)return;
+    sel.innerHTML=SUBJECTS.map(([n,k])=>`<option value="${k}">${n}</option>`).join('');
+  };
+  window.downloadMarksTemplate=function(){
+    if(!window.XLSX){alert('Excel library load नहीं हुई।');return;}
+    const rows=[['Student ID','Student Name','Marks'],['PG2026001','Student Name','85']];
+    const ws=XLSX.utils.aoa_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Marks');XLSX.writeFile(wb,'Patanjali_Marks_Upload_Template.xlsx');
+  };
+  window.uploadMarksExcel=async function(e){
+    if(typeof requireAdmin==='function'&&!requireAdmin())return;
+    const file=e.target.files?.[0]; if(!file)return;
+    const status=document.getElementById('marksUploadStatus'); const cls=document.getElementById('uploadMarkClass').value,subject=document.getElementById('uploadMarkSubject').value,exam=document.getElementById('uploadMarkExam').value;
+    try{
+      const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      let added=0,skipped=0;
+      const keyAliases={'student id':'id','studentid':'id','id':'id','admission no.':'id','admission no':'id','student name':'name','name':'name','marks':'marks','mark':'marks'};
+      for(const raw of rows){
+        const r={};Object.entries(raw).forEach(([k,v])=>r[keyAliases[String(k).trim().toLowerCase()]||String(k).trim().toLowerCase()]=v);
+        let student=(window.students||[]).find(s=>String(s.id).trim().toLowerCase()===String(r.id||'').trim().toLowerCase()&&(!cls||s.className===cls));
+        if(!student && r.name)student=(window.students||[]).find(s=>String(s.name).trim().toLowerCase()===String(r.name).trim().toLowerCase()&&(!cls||s.className===cls));
+        if(!student){skipped++;continue}
+        let m=window.markObj(student.id,exam); if(!m){m={studentId:student.id,exam};window.marks.push(m)}
+        m[subject]=Math.max(0,Math.min(100,+(r.marks||0)));
+        added++;
+      }
+      localStorage.setItem(KEY.marks,JSON.stringify(window.marks));renderMarks();renderResultPage();if(typeof refreshAll==='function')refreshAll();
+      try{await window.firebaseAcademicAPI?.saveAllMarks(window.marks)}catch(err){console.error(err)}
+      status.innerHTML=`<b>✅ Upload complete:</b> ${added} records updated, ${skipped} rows skipped. Class: ${cls}, Subject: ${SUBJECTS.find(x=>x[1]===subject)?.[0]||subject}, Exam: ${exam}`;
+      toast('☁️ Marks uploaded and synced');
+    }catch(err){console.error(err);status.textContent='❌ Excel import error: '+err.message}
+    e.target.value='';
+  };
+
+  window.renderResultPage=function(){
+    const exam=document.getElementById('resultExam')?.value||'Unit Test 1',cls=document.getElementById('resultClass')?.value||'';
+    const arr=visible().filter(s=>!cls||s.className===cls); const rows=arr.map(s=>{const m=window.markObj(s.id,exam)||{};return {s,x:window.calcMark(m)}}).filter(o=>o.x.subjectsCount>0);
+    const avg=rows.length?rows.reduce((a,o)=>a+o.x.pct,0)/rows.length:0;document.getElementById('resultCount').textContent=rows.length;document.getElementById('resultAverage').textContent=avg.toFixed(1)+'%';document.getElementById('resultPassed').textContent=rows.filter(o=>o.x.grade!=='F').length;document.getElementById('resultFailed').textContent=rows.filter(o=>o.x.grade==='F').length;
+    document.getElementById('resultTable').innerHTML=rows.length?rows.map((o,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(o.s.id)}</td><td>${escapeHtml(o.s.name)}</td><td>${escapeHtml(o.s.className)}-${escapeHtml(o.s.section||'')}</td><td>${o.x.total}</td><td>${o.x.max}</td><td>${o.x.pct.toFixed(1)}%</td><td class="${o.x.grade==='F'?'result-bad':'result-good'}">${o.x.grade}</td></tr>`).join(''):`<tr><td colspan="8" class="empty">No result records found.</td></tr>`;
+  };
+
+  function rowsFor(type){
+    if(type==='students')return visible().map((s,i)=>({Sr:i+1,'Student ID':s.id,Name:s.name,'Father Name':s.father||'','Mother Name':s.mother||'','Date of Birth':s.dob||'',Class:s.className||'',Section:s.section||'',Mobile:s.mobile||'',Address:s.address||''}));
+    if(type==='attendance'){const out=[];Object.entries(window.attendance||{}).forEach(([date,d])=>Object.entries(d||{}).forEach(([id,st])=>{const s=(window.students||[]).find(x=>String(x.id)===String(id));if(s&&visible().some(v=>String(v.id)===String(id)))out.push({Date:date,'Student ID':id,Student:s.name,Class:s.className,Section:s.section,Status:st})}));return out}
+    if(type==='marks'){const exam=document.getElementById('markExam')?.value||'';return visible().map(s=>{const m=window.markObj(s.id,exam)||{};const x=window.calcMark(m);const r={'Student ID':s.id,Student:s.name,Class:s.className,Section:s.section,Exam:exam};SUBJECTS.forEach(([n,k])=>r[n]=getVal(m,k));r.Total=x.total;r.Max=x.max;r.Percentage=x.pct.toFixed(1)+'%';r.Grade=x.grade;return r})}
+    if(type==='results'){const exam=document.getElementById('resultExam')?.value||'Unit Test 1';return visible().map(s=>{const m=window.markObj(s.id,exam)||{};const x=window.calcMark(m);return {'Student ID':s.id,Student:s.name,Class:s.className,Section:s.section,Exam:exam,Total:x.total,Max:x.max,Percentage:x.pct.toFixed(1)+'%',Grade:x.grade}}).filter(r=>r.Max>0)}
+    return [];
+  }
+  window.downloadExcel=function(type){
+    if(!window.XLSX){alert('Excel library load नहीं हुई।');return}const data=rowsFor(type);if(!data.length){alert('Download करने के लिए data नहीं है।');return}
+    const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,type==='results'?'Results':type.charAt(0).toUpperCase()+type.slice(1));XLSX.writeFile(wb,`Patanjali_${type}_${new Date().toISOString().slice(0,10)}.xlsx`);toast('Excel downloaded');
+  };
+  window.downloadPDF=function(type){
+    const data=rowsFor(type);if(!data.length){alert('PDF बनाने के लिए data नहीं है।');return}
+    const J=window.jspdf?.jsPDF;if(!J){if(typeof printReport==='function')return printReport(type==='results'?'marks':type);return}
+    const doc=new J({orientation:'landscape',unit:'pt',format:'a4'});doc.setFontSize(16);doc.text('Patanjali Gurukulam - '+type.toUpperCase(),40,35);doc.setFontSize(9);doc.text('Generated: '+new Date().toLocaleString(),40,50);
+    const headers=Object.keys(data[0]);const body=data.map(r=>headers.map(h=>String(r[h]??'')));
+    if(typeof doc.autoTable==='function')doc.autoTable({head:[headers],body,startY:65,styles:{fontSize:6,cellPadding:3},headStyles:{fontSize:6}});else{let y=75;doc.setFontSize(7);data.slice(0,35).forEach((r,i)=>{doc.text(headers.map(h=>String(r[h]??'')).join(' | ').slice(0,180),40,y);y+=12});}
+    doc.save(`Patanjali_${type}_${new Date().toISOString().slice(0,10)}.pdf`);toast('PDF downloaded');
+  };
+  
+
+  /* ---------------- MESSAGING ---------------- */
+  window.sendMessage=async function(){
+    const text=(document.getElementById('messageText')?.value||'').trim(); if(!text)return;
+    let receiverRole,receiverId,receiverName;
+    if(window.currentRole==='student'){
+      receiverRole='admin';receiverId='admin';receiverName='Administrator';
+    }else{
+      if(!selectedChatStudent){toast('पहले student select करें');return}
+      receiverRole='student';receiverId=selectedChatStudent;receiverName=safeName(selectedChatStudent);
+    }
+    const senderId=window.currentRole==='student'?window.currentStudentId:'admin',senderName=window.currentRole==='student'?safeName(window.currentStudentId):'Administrator';
+    const msg={id:'MSG_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),senderRole:window.currentRole,senderId,senderName,receiverRole,receiverId,receiverName,text,createdAt:new Date().toISOString(),read:false};
+    try{await window.firebaseMessagingAPI?.save(msg)}catch(e){console.error(e)}
+    const local=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]');local.push(msg);localStorage.setItem('PG_MESSAGES',JSON.stringify(local));
+    document.getElementById('messageText').value='';await renderMessages();toast('Message sent');
+  };
+  window.renderMessages=async function(){
+    const users=document.getElementById('messageUsers'),list=document.getElementById('messageList'),head=document.getElementById('messageChatHead');if(!users||!list)return;
+    let all=[];try{all=await window.firebaseMessagingAPI?.load()||[]}catch(e){all=[]}if(!all.length)all=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]');
+    const me=window.currentRole==='student'?window.currentStudentId:'admin';
+    if(window.currentRole==='student'){
+      selectedChatStudent='admin';users.innerHTML='<div class="chat-user active"><b>Administrator</b><small>School Admin</small></div>';head.textContent='Administrator';
+      const conv=all.filter(m=>(m.senderId===me&&m.receiverId==='admin')||(m.senderId==='admin'&&m.receiverId===me));renderMessageList(conv,me,list);
+    }else{
+      const students=window.students||[];users.innerHTML=students.map(s=>`<div class="chat-user ${selectedChatStudent===s.id?'active':''}" onclick="selectMessageStudent('${String(s.id).replace(/'/g,"\\'")}')"><b>${escapeHtml(s.name)}</b><small>${escapeHtml(s.id)} • Class ${escapeHtml(s.className||'')}</small></div>`).join('')||'<div class="empty">No students</div>';
+      if(!selectedChatStudent){head.textContent='Select a student';list.innerHTML='<div class="empty">Select a student to view messages.</div>';return}
+      head.textContent='Chat with '+safeName(selectedChatStudent);const conv=all.filter(m=>(m.senderId==='admin'&&m.receiverId===selectedChatStudent)||(m.senderId===selectedChatStudent&&m.receiverId==='admin'));renderMessageList(conv,'admin',list);
+    }
+  };
+  function renderMessageList(conv,me,list){list.innerHTML=conv.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(m=>`<div class="chat-msg ${m.senderId===me?'me':'them'}"><b>${escapeHtml(m.senderName||'')}</b><div>${escapeHtml(m.text)}</div><small>${new Date(m.createdAt).toLocaleString()}</small></div>`).join('')||'<div class="empty">No messages yet.</div>';list.scrollTop=list.scrollHeight;}
+  window.selectMessageStudent=function(id){selectedChatStudent=id;renderMessages();};
+
+  /* refresh new sections after login / page load */
+  const oldApply=window.applyRolePermissions;
+  window.applyRolePermissions=function(){if(typeof oldApply==='function')oldApply();document.querySelectorAll('.admin-only').forEach(el=>{if(window.currentRole==='student'&&el.closest('#messages')===null)el.style.display=el.classList.contains('nav-item')?'none':'';});if(typeof renderResultPage==='function')renderResultPage();};
+
+  // Keep role globals in sync with original lexical vars for messaging.
+  Object.defineProperty(window,'currentRole',{get(){return typeof currentRole!=='undefined'?currentRole:''}});
+  Object.defineProperty(window,'currentStudentId',{get(){return typeof currentStudentId!=='undefined'?currentStudentId:''}});
+
+  // Build subject inputs when modal is first opened and fill when selections change.
+  document.addEventListener('change',e=>{if(e.target?.id==='mStudent'||e.target?.id==='mExam')window.fillMarksForm();});
+  setTimeout(()=>{subjectInputs();initUploadMarksPage();if(window.currentRole==='student')renderMessages();},800);
+})();
+</script>
+<script type="module">
+/* Firebase message transport */
+import { getDocs, collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+const waitForDB=async()=>{for(let i=0;i<50;i++){if(window.firebaseDB)return window.firebaseDB;await new Promise(r=>setTimeout(r,100));}return null};
+const db=await waitForDB();
+window.firebaseMessagingAPI={
+  async save(msg){if(!db)return false;await setDoc(doc(db,'messages',String(msg.id)),msg,{merge:true});return true},
+  async load(){if(!db)return [];const snap=await getDocs(collection(db,'messages'));return snap.docs.map(d=>({...d.data(),id:d.id}));}
+};
+if(window.currentRole){try{window.renderMessages?.()}catch(e){}}
+</script>
+
+<script type="module">
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
+const waitForFirebase=async()=>{for(let i=0;i<100;i++){if(window.firebaseApp&&window.firebaseDB)return true;await new Promise(r=>setTimeout(r,100));}return false};
+if(await waitForFirebase()){
+  const storage=getStorage(window.firebaseApp);
+  window.firebaseStorageAPI={
+    async upload(file,senderId,receiverId){
+      const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+      const path=`chat/${senderId}/${receiverId}/${Date.now()}_${safe}`;
+      const storageRef=ref(storage,path);
+      const snap=await uploadBytes(storageRef,file,{contentType:file.type||'application/octet-stream'});
+      const url=await getDownloadURL(snap.ref);
+      return {name:file.name,size:file.size,type:file.type||'',url,path,kind:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':'file'};
+    }
+  };
+  console.log('☁️ Firebase Storage ready for chat attachments');
+}
+</script>
+<script>
+(function(){
+  const SUBJECTS = window.PG_SUBJECTS || [
+    ['Math','math'],['English','english'],['Science','science'],['Social Science','socialScience'],
+    ['Hindi','hindi'],['Sanskrit','sanskrit'],['Sanskrit Sahitya','sanskritSahitya'],['Sanskrit Vyakaran','sanskritVyakaran'],
+    ['Shastra','shastra'],['Web Application','webApplication'],['Political Science','politicalScience'],['History','history'],
+    ['Economics','economics'],['Yoga','yoga'],['Physical Education','physicalEducation'],['Music','music'],['IT','it']
+  ];
+  const CLASSES=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+  let markRows=[];
+  let chatTarget={role:'admin',id:'admin',name:'Administrator'};
+
+  const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const toastMsg=m=>{try{toast(m)}catch(e){alert(m)}};
+  const currentRole=()=>window.currentRole||'';
+  const currentStudentId=()=>window.currentStudentId||'';
+  const students=()=>Array.isArray(window.students)?window.students:[];
+  const marks=()=>Array.isArray(window.marks)?window.marks:[];
+  const keyForSubject=name=>{const x=SUBJECTS.find(a=>a[0]===name);return x?x[1]:name};
+  const val=(m,k)=>+(m?.[k]??(k==='math'?m?.maths:k==='socialScience'?m?.social:0)??0)||0;
+
+  /* =====================================================
+     A4 MARKSHEET BUILDER
+  ===================================================== */
+  window.initUploadMarksPage=function(){
+    const sel=document.getElementById('uploadMarkSubject');
+    if(sel) sel.innerHTML=SUBJECTS.map(([n,k])=>`<option value="${k}">${esc(n)}</option>`).join('');
+  };
+
+  window.importMarksheetStudents=function(){
+    if(typeof requireAdmin==='function'&&!requireAdmin())return;
+    const cls=document.getElementById('uploadMarkClass')?.value;
+    const subject=document.getElementById('uploadMarkSubject')?.value;
+    const exam=document.getElementById('uploadMarkExam')?.value;
+    if(!cls||!subject||!exam){toastMsg('Class, Subject और Exam तीनों select करें।');return;}
+    markRows=students().filter(s=>s.className===cls).map(s=>({student:s,mark:(marks().find(m=>String(m.studentId)===String(s.id)&&String(m.exam)===String(exam))||{})}));
+    renderMarksheetTable();
+    const name=SUBJECTS.find(x=>x[1]===subject)?.[0]||subject;
+    document.getElementById('marksUploadStatus').innerHTML=`<b>✅ ${markRows.length} students imported.</b> Class ${esc(cls)} • Subject ${esc(name)} • Exam ${esc(exam)}`;
+  };
+
+  window.renderMarksheetTable=function(){
+    const box=document.getElementById('marksheetTableBox');
+    if(!box)return;
+    const subject=document.getElementById('uploadMarkSubject')?.value||'math';
+    const maxDefault=+(document.getElementById('uploadMarkMax')?.value||100)||100;
+    const subjectName=SUBJECTS.find(x=>x[1]===subject)?.[0]||subject;
+    if(!markRows.length){box.innerHTML='<div class="empty">Students will appear here after Import Students.</div>';return;}
+    box.innerHTML=`<table><thead><tr><th>Sr.</th><th>Student ID</th><th>Student Name</th><th>Father Name</th><th>Class</th><th>Section</th><th>${esc(subjectName)}</th><th>Maximum Marks</th><th>Percentage</th></tr></thead><tbody>${markRows.map((r,i)=>{
+      const m=r.mark||{};const got=val(m,subject);const max=+(m['maxMarks_'+subject]??maxDefault)||maxDefault;const pct=max?got/max*100:0;
+      return `<tr><td>${i+1}</td><td>${esc(r.student.id)}</td><td><b>${esc(r.student.name)}</b></td><td>${esc(r.student.father||'')}</td><td>${esc(r.student.className)}</td><td>${esc(r.student.section)}</td><td><input class="input marksheet-obtain" data-id="${esc(r.student.id)}" type="number" min="0" max="${max}" value="${got}" oninput="updateMarksheetPercent(this)"></td><td><input class="input marksheet-max" data-id="${esc(r.student.id)}" type="number" min="1" value="${max}" oninput="updateMarksheetPercent(this)"></td><td id="pct_${esc(r.student.id)}">${pct.toFixed(2)}%</td></tr>`;
+    }).join('')}</tbody></table>`;
+  };
+
+  window.updateMarksheetPercent=function(el){
+    const id=el.dataset.id;const got=+(document.querySelector(`.marksheet-obtain[data-id="${CSS.escape(id)}"]`)?.value||0);const max=+(document.querySelector(`.marksheet-max[data-id="${CSS.escape(id)}"]`)?.value||1);const out=document.getElementById('pct_'+id);if(out)out.textContent=(max?got/max*100:0).toFixed(2)+'%';
+  };
+
+  window.saveMarksheetMarks=async function(){
+    if(typeof requireAdmin==='function'&&!requireAdmin())return;
+    const subject=document.getElementById('uploadMarkSubject')?.value,exam=document.getElementById('uploadMarkExam')?.value;
+    if(!subject||!exam||!markRows.length){toastMsg('पहले Import Students करें।');return;}
+    for(const r of markRows){
+      const id=r.student.id;const got=Math.max(0,+(document.querySelector(`.marksheet-obtain[data-id="${CSS.escape(id)}"]`)?.value||0));const max=Math.max(1,+(document.querySelector(`.marksheet-max[data-id="${CSS.escape(id)}"]`)?.value||100));
+      let m=marks().find(x=>String(x.studentId)===String(id)&&String(x.exam)===String(exam));
+      if(!m){m={studentId:id,exam};window.marks.push(m)}
+      m[subject]=Math.min(got,max);m['maxMarks_'+subject]=max;
+    }
+    localStorage.setItem(KEY.marks,JSON.stringify(window.marks));
+    try{await window.firebaseAcademicAPI?.saveAllMarks(window.marks)}catch(e){console.error(e)}
+    if(typeof renderMarks==='function')renderMarks();if(typeof renderResultPage==='function')renderResultPage();if(typeof refreshAll==='function')refreshAll();
+    toastMsg('☁️ Marks saved online');
+  };
+
+  window.previewMarksheetLogo=function(e){
+    const file=e.target.files?.[0];if(!file)return;
+    if(file.size>5*1024*1024){toastMsg('Logo 5 MB से छोटा रखें।');e.target.value='';return;}
+    const rd=new FileReader();rd.onload=()=>{localStorage.setItem('PG_MARKSHEET_LOGO',rd.result);const p=document.getElementById('marksheetLogoPreview');if(p)p.innerHTML='<img src="'+rd.result+'" style="max-height:70px;max-width:160px;border:1px solid #ddd;border-radius:6px;padding:4px">';};rd.readAsDataURL(file);
+  };
+
+  function logoData(){return localStorage.getItem('PG_MARKSHEET_LOGO')||'';}
+  function drawLogo(doc,x,y,w,h){
+    const img=logoData();
+    if(img){try{doc.addImage(img,'AUTO',x,y,w,h);return}catch(e){}}
+    doc.setFillColor(183,28,28);doc.circle(x+w/2,y+h/2,Math.min(w,h)/2,'F');doc.setTextColor(255,255,255);doc.setFontSize(16);doc.setFont(undefined,'bold');doc.text('PG',x+w/2,y+h/2+5,{align:'center'});doc.setTextColor(0,0,0);
+  }
+
+  window.downloadMarksheetExcel=function(){
+    if(!markRows.length){toastMsg('पहले Import Students करें।');return;}
+    if(!window.XLSX){toastMsg('Excel library load नहीं हुई।');return;}
+    const subject=document.getElementById('uploadMarkSubject').value,exam=document.getElementById('uploadMarkExam').value,maxDefault=+(document.getElementById('uploadMarkMax').value||100);
+    const subjectName=SUBJECTS.find(x=>x[1]===subject)?.[0]||subject;
+    const data=markRows.map((r,i)=>{const got=+(document.querySelector(`.marksheet-obtain[data-id="${CSS.escape(r.student.id)}"]`)?.value||0);const max=+(document.querySelector(`.marksheet-max[data-id="${CSS.escape(r.student.id)}"]`)?.value||maxDefault);return {'Sr.':i+1,'Student ID':r.student.id,'Student Name':r.student.name,'Father Name':r.student.father||'','Class':r.student.className,'Section':r.student.section,'Subject':subjectName,'Obtain Marks':got,'Maximum Marks':max,'Percentage':(max?got/max*100:0).toFixed(2)+'%',Exam:exam}});
+    const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Marksheet');XLSX.writeFile(wb,`Patanjali_${document.getElementById('uploadMarkClass').value}_${subjectName}_${exam}_Marksheet.xlsx`);toastMsg('Excel downloaded');
+  };
+
+  window.downloadMarksheetPDF=async function(){
+    if(!markRows.length){toastMsg('पहले Import Students करें।');return;}
+    const J=window.jspdf?.jsPDF;if(!J){toastMsg('PDF library load नहीं हुई।');return;}
+    const doc=new J({orientation:'portrait',unit:'mm',format:'a4'});
+    const cls=document.getElementById('uploadMarkClass').value,subject=document.getElementById('uploadMarkSubject').value,exam=document.getElementById('uploadMarkExam').value,maxDefault=+(document.getElementById('uploadMarkMax').value||100);
+    const subjectName=SUBJECTS.find(x=>x[1]===subject)?.[0]||subject,title=document.getElementById('marksheetTitle')?.value||'STUDENT MARKSHEET';
+    markRows.forEach((r,idx)=>{
+      if(idx)doc.addPage();
+      /* FRONT */
+      drawLogo(doc,12,12,25,25);doc.setFont(undefined,'bold');doc.setFontSize(18);doc.text('PATANJALI GURUKULAM',148,19,{align:'right'});doc.setFontSize(10);doc.setFont(undefined,'normal');doc.text('School Management & Academic ERP',148,25,{align:'right'});doc.setDrawColor(183,28,28);doc.line(12,42,198,42);doc.setFontSize(16);doc.setFont(undefined,'bold');doc.text(title.toUpperCase(),105,55,{align:'center'});doc.setFontSize(11);doc.text(`Academic Examination: ${exam}`,105,64,{align:'center'});
+      doc.setFont(undefined,'normal');doc.setFontSize(11);doc.roundedRect(20,78,170,75,4,4);
+      const info=[['Student Name',r.student.name],['Student ID',r.student.id],['Father Name',r.student.father||'-'],['Class / Section',`${r.student.className} / ${r.student.section||'-'}`],['Date of Birth',r.student.dob||'-'],['House',r.student.house||'-'],['Academic Year',r.student.academicYear||new Date().getFullYear()+'-'+(new Date().getFullYear()+1)]];
+      info.forEach((a,i)=>{const y=90+i*9;doc.setFont(undefined,'bold');doc.text(a[0],28,y);doc.setFont(undefined,'normal');doc.text(': '+String(a[1]),82,y);});
+      doc.setFont(undefined,'bold');doc.setFontSize(12);doc.text('This page contains the student identification / front side of the marksheet.',105,176,{align:'center'});doc.setFont(undefined,'normal');doc.setFontSize(10);doc.text('Class: '+cls,28,195);doc.text('Examination: '+exam,28,203);doc.text('Student Signature',35,260);doc.text('Class Teacher',92,260);doc.text('Principal',165,260,{align:'center'});doc.line(20,255,62,255);doc.line(76,255,118,255);doc.line(145,255,188,255);
+      /* BACK */
+      doc.addPage();drawLogo(doc,12,10,20,20);doc.setFont(undefined,'bold');doc.setFontSize(15);doc.text('PATANJALI GURUKULAM',105,17,{align:'center'});doc.setFontSize(11);doc.text('MARKS DETAIL — BACK SIDE',105,25,{align:'center'});doc.setFont(undefined,'normal');doc.setFontSize(9);doc.text(`Student: ${r.student.name}   |   ID: ${r.student.id}   |   Class: ${cls}   |   Exam: ${exam}`,15,35);
+      const got=+(document.querySelector(`.marksheet-obtain[data-id="${CSS.escape(r.student.id)}"]`)?.value||0);const max=+(document.querySelector(`.marksheet-max[data-id="${CSS.escape(r.student.id)}"]`)?.value||maxDefault);const pct=max?got/max*100:0;const grade=pct>=90?'A+':pct>=80?'A':pct>=70?'B+':pct>=60?'B':pct>=50?'C':pct>=33?'D':'F';
+      if(doc.autoTable)doc.autoTable({startY:48,head:[['Subject','Obtain Marks','Maximum Marks','Percentage','Grade']],body:[[subjectName,String(got),String(max),pct.toFixed(2)+'%',grade]],theme:'grid',styles:{fontSize:11,cellPadding:5},headStyles:{fillColor:[183,28,28],textColor:255}});
+      doc.setFontSize(9);doc.text('Result Status: '+(grade==='F'?'Needs Improvement':'Pass'),15,100);doc.text('Remarks: ________________________________________________',15,112);doc.text('Subject Teacher',35,250);doc.text('Exam In-charge',105,250);doc.text('Principal',170,250,{align:'center'});doc.line(20,245,62,245);doc.line(85,245,125,245);doc.line(150,245,190,245);
+    });
+    doc.save(`Patanjali_${cls}_${subjectName}_${exam}_A4_Marksheets.pdf`);toastMsg('A4 marksheet PDF तैयार है');
+  };
+
+  /* =====================================================
+     CHAT: STUDENT ↔ STUDENT + ADMIN, FILE LIMITS
+  ===================================================== */
+  window.selectMessageStudent=function(id,role='student'){
+    const s=students().find(x=>String(x.id)===String(id));
+    chatTarget=role==='admin'?{role:'admin',id:'admin',name:'Administrator'}:{role:'student',id:id,name:s?.name||id};
+    window.renderMessages();
+  };
+
+  window.sendMessage=async function(){
+    const text=(document.getElementById('messageText')?.value||'').trim();
+    const file=document.getElementById('messageFile')?.files?.[0]||null;
+    const meRole=currentRole(),meId=meRole==='student'?currentStudentId():'admin';
+    if(!meId){toastMsg('Login session नहीं मिली।');return;}
+    if(!chatTarget?.id || (chatTarget.id===meId&&chatTarget.role===meRole)){toastMsg('पहले recipient select करें।');return;}
+    if(!text&&!file){toastMsg('Message या file चुनें।');return;}
+    let attachment=null;
+    if(file){
+      const isVideo=file.type.startsWith('video/');const limit=isVideo?50*1024*1024:25*1024*1024;
+      if(file.size>limit){toastMsg(isVideo?'Video maximum 50 MB है।':'Photo/File maximum 25 MB है।');return;}
+      if(!window.firebaseStorageAPI){toastMsg('File storage अभी ready नहीं है। थोड़ी देर बाद फिर भेजें।');return;}
+      try{attachment=await window.firebaseStorageAPI.upload(file,meId,chatTarget.id);toastMsg('☁️ File uploaded');}catch(e){console.error(e);toastMsg('File upload failed: '+e.message);return;}
+    }
+    const msg={id:'MSG_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),senderRole:meRole,senderId:meId,senderName:meRole==='student'?(students().find(s=>String(s.id)===String(meId))?.name||meId):'Administrator',receiverRole:chatTarget.role,receiverId:chatTarget.id,receiverName:chatTarget.name,text,attachment,createdAt:new Date().toISOString(),read:false};
+    try{await window.firebaseMessagingAPI?.save(msg);}catch(e){console.error(e);toastMsg('Message online save failed: '+e.message);return;}
+    const local=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]');local.push(msg);localStorage.setItem('PG_MESSAGES',JSON.stringify(local));
+    document.getElementById('messageText').value='';if(document.getElementById('messageFile'))document.getElementById('messageFile').value='';await renderMessages();toastMsg('Message sent');
+  };
+
+  window.renderMessages=async function(){
+    const users=document.getElementById('messageUsers'),list=document.getElementById('messageList'),head=document.getElementById('messageChatHead');if(!users||!list)return;
+    let all=[];try{all=await window.firebaseMessagingAPI?.load()||[]}catch(e){all=[]}if(!all.length)all=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]');
+    const role=currentRole(),me=role==='student'?currentStudentId():'admin';
+    if(role==='student'){
+      const targets=[{role:'admin',id:'admin',name:'Administrator'},...students().filter(s=>String(s.id)!==String(me)).map(s=>({role:'student',id:s.id,name:s.name}))];
+      if(!targets.some(t=>t.role===chatTarget.role&&String(t.id)===String(chatTarget.id)))chatTarget=targets[0]||{role:'admin',id:'admin',name:'Administrator'};
+      users.innerHTML=targets.map(t=>`<div class="chat-user ${t.role===chatTarget.role&&String(t.id)===String(chatTarget.id)?'active':''}" onclick="selectMessageStudent('${esc(t.id)}','${t.role}')"><b>${esc(t.name)}</b><small>${t.role==='admin'?'School Admin':'Student'}</small></div>`).join('');
+    }else{
+      const targets=students().map(s=>({role:'student',id:s.id,name:s.name,className:s.className}));
+      if(!targets.some(t=>String(t.id)===String(chatTarget.id)))chatTarget=targets[0]||{role:'student',id:'',name:''};
+      users.innerHTML=targets.map(t=>`<div class="chat-user ${String(t.id)===String(chatTarget.id)?'active':''}" onclick="selectMessageStudent('${esc(t.id)}','student')"><b>${esc(t.name)}</b><small>${esc(t.id)} • Class ${esc(t.className||'')}</small></div>`).join('')||'<div class="empty">No students</div>';
+    }
+    if(!chatTarget.id){head.textContent='Select a user';list.innerHTML='<div class="empty">No recipient available.</div>';return;}
+    head.textContent='Chat with '+chatTarget.name;
+    const conv=all.filter(m=>(String(m.senderId)===String(me)&&String(m.receiverId)===String(chatTarget.id))||(String(m.senderId)===String(chatTarget.id)&&String(m.receiverId)===String(me)));
+    list.innerHTML=conv.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(m=>{
+      const att=m.attachment;let media='';
+      if(att){if(att.kind==='image')media=`<div style="margin-top:7px"><img src="${esc(att.url)}" alt="photo" style="max-width:220px;max-height:180px;border-radius:8px"></div>`;else if(att.kind==='video')media=`<div style="margin-top:7px"><video controls style="max-width:250px;max-height:180px" src="${esc(att.url)}"></video></div>`;else media=`<div style="margin-top:7px"><a href="${esc(att.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">📎 ${esc(att.name)}</a></div>`;}
+      return `<div class="chat-msg ${String(m.senderId)===String(me)?'me':'them'}"><b>${esc(m.senderName||'')}</b>${m.text?`<div>${esc(m.text)}</div>`:''}${media}<small>${new Date(m.createdAt).toLocaleString()}</small></div>`;
+    }).join('')||'<div class="empty">No messages yet.</div>';list.scrollTop=list.scrollHeight;
+  };
+
+  document.addEventListener('change',e=>{if(['uploadMarkClass','uploadMarkSubject','uploadMarkExam','uploadMarkMax'].includes(e.target?.id)&&markRows.length)renderMarksheetTable();});
+  setTimeout(()=>{initUploadMarksPage();},1000);
+})();
+
 </script>
 </body></html>
