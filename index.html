@@ -1404,38 +1404,7 @@ setTimeout(async()=>{
   };
   
 
-  /* ---------------- MESSAGING ---------------- */
-  window.sendMessage=async function(){
-    const text=(document.getElementById('messageText')?.value||'').trim(); if(!text)return;
-    let receiverRole,receiverId,receiverName;
-    if(window.currentRole==='student'){
-      receiverRole='admin';receiverId='admin';receiverName='Administrator';
-    }else{
-      if(!selectedChatStudent){toast('पहले student select करें');return}
-      receiverRole='student';receiverId=selectedChatStudent;receiverName=safeName(selectedChatStudent);
-    }
-    const senderId=window.currentRole==='student'?window.currentStudentId:'admin',senderName=window.currentRole==='student'?safeName(window.currentStudentId):'Administrator';
-    const msg={id:'MSG_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),senderRole:window.currentRole,senderId,senderName,receiverRole,receiverId,receiverName,text,createdAt:new Date().toISOString(),read:false};
-    try{await window.firebaseMessagingAPI?.save(msg)}catch(e){console.error(e)}
-    const local=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]');local.push(msg);localStorage.setItem('PG_MESSAGES',JSON.stringify(local));
-    document.getElementById('messageText').value='';await renderMessages();toast('Message sent');
-  };
-  window.renderMessages=async function(){
-    const users=document.getElementById('messageUsers'),list=document.getElementById('messageList'),head=document.getElementById('messageChatHead');if(!users||!list)return;
-    let all=[];try{all=await window.firebaseMessagingAPI?.load()||[]}catch(e){all=[]}if(!all.length)all=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]');
-    const me=window.currentRole==='student'?window.currentStudentId:'admin';
-    if(window.currentRole==='student'){
-      selectedChatStudent='admin';users.innerHTML='<div class="chat-user active"><b>Administrator</b><small>School Admin</small></div>';head.textContent='Administrator';
-      const conv=all.filter(m=>(m.senderId===me&&m.receiverId==='admin')||(m.senderId==='admin'&&m.receiverId===me));renderMessageList(conv,me,list);
-    }else{
-      const students=window.students||[];users.innerHTML=students.map(s=>`<div class="chat-user ${selectedChatStudent===s.id?'active':''}" onclick="selectMessageStudent('${String(s.id).replace(/'/g,"\\'")}')"><b>${escapeHtml(s.name)}</b><small>${escapeHtml(s.id)} • Class ${escapeHtml(s.className||'')}</small></div>`).join('')||'<div class="empty">No students</div>';
-      if(!selectedChatStudent){head.textContent='Select a student';list.innerHTML='<div class="empty">Select a student to view messages.</div>';return}
-      head.textContent='Chat with '+safeName(selectedChatStudent);const conv=all.filter(m=>(m.senderId==='admin'&&m.receiverId===selectedChatStudent)||(m.senderId===selectedChatStudent&&m.receiverId==='admin'));renderMessageList(conv,'admin',list);
-    }
-  };
-  function renderMessageList(conv,me,list){list.innerHTML=conv.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).map(m=>`<div class="chat-msg ${m.senderId===me?'me':'them'}"><b>${escapeHtml(m.senderName||'')}</b><div>${escapeHtml(m.text)}</div><small>${new Date(m.createdAt).toLocaleString()}</small></div>`).join('')||'<div class="empty">No messages yet.</div>';list.scrollTop=list.scrollHeight;}
-  window.selectMessageStudent=function(id){selectedChatStudent=id;renderMessages();};
-
+  /* Legacy messaging renderer removed: advanced Firebase messaging renderer above is the single active implementation. */
   /* refresh new sections after login / page load */
   const oldApply=window.applyRolePermissions;
   window.applyRolePermissions=function(){if(typeof oldApply==='function')oldApply();document.querySelectorAll('.admin-only').forEach(el=>{if(window.currentRole==='student'&&el.closest('#messages')===null)el.style.display=el.classList.contains('nav-item')?'none':'';});if(typeof renderResultPage==='function')renderResultPage();};
