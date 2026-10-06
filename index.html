@@ -47,6 +47,13 @@ body{background:#f4f6f9;color:#30343b}.topbar{height:65px;background:#b71c1c;col
 .result-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:15px}
 @media(max-width:800px){.chat-layout{grid-template-columns:1fr}.result-summary{grid-template-columns:1fr 1fr}.chat-users{max-height:220px}}
 </style>
+<style id="student-filter-style">.student-filter-bar{background:#fff;border-radius:8px;padding:14px 16px;margin:0 0 14px;box-shadow:0 2px 9px rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;gap:15px}.student-filter-title{font-size:15px;font-weight:700;color:#30343b;white-space:nowrap}.student-filter-controls{display:flex;gap:10px;align-items:center;flex:1;justify-content:flex-end}.student-filter-controls .input{max-width:360px}.student-filter-controls .select{max-width:190px}@media(max-width:700px){.student-filter-bar{flex-direction:column;align-items:stretch}.student-filter-controls{justify-content:stretch}.student-filter-controls .input,.student-filter-controls .select{max-width:none}}</style>
+<style id="student-message-white-fix">
+/* Student list: Student Name, Date of Birth and Mobile cells use the same clean white background. */
+.student-list-table tbody td:nth-child(3),
+.student-list-table tbody td:nth-child(8),
+.student-list-table tbody td:nth-child(9){background:#fff!important;}
+</style>
 </head>
 <body>
 <div id="loginScreen" class="login-screen"><div class="login-card"><div class="login-logo">PG</div><h1>Patanjali Gurukulam</h1><div class="login-sub">ERP Login Panel</div><div class="role-tabs"><div id="adminTab" class="role-tab active" onclick="selectLoginRole('admin')">👨‍💼 Admin</div><div id="studentTab" class="role-tab" onclick="selectLoginRole('student')">👨‍🎓 Student</div></div><div class="form-group"><label id="loginIdLabel">Admin ID</label><input id="loginId" class="input" placeholder="Enter Admin ID" autocomplete="username"></div><div class="form-group" style="margin-top:12px"><label>Password</label><input id="loginPassword" type="password" class="input" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div><button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="doLogin()">🔐 Login</button><div id="loginError" class="login-error"></div><div class="login-help" id="loginHelp">Admin login: <b>admin</b> / <b>1234</b></div></div></div>
@@ -72,7 +79,9 @@ body{background:#f4f6f9;color:#30343b}.topbar{height:65px;background:#b71c1c;col
 <section id="dashboard" class="page active"><div class="page-header"><div><h1>Dashboard</h1><p>Welcome to Patanjali Gurukulam ERP</p></div><div id="currentDate" class="small"></div></div><div class="cards"><div class="card"><span class="card-icon">👨‍🎓</span><div class="card-title">Total Students</div><div class="card-number" id="dStudents">0</div></div><div class="card"><span class="card-icon">✅</span><div class="card-title">Present Today</div><div class="card-number" id="dPresent">0</div></div><div class="card"><span class="card-icon">💰</span><div class="card-title">Fees Collected</div><div class="card-number" id="dFees">₹0</div></div><div class="card"><span class="card-icon">📊</span><div class="card-title">Average Result</div><div class="card-number" id="dResult">0%</div></div></div><div class="grid-2"><div class="panel"><div class="panel-title">Quick Actions</div><div class="quick-grid"><div class="quick" onclick="showPageById('students')">👨‍🎓 Add / Manage Students</div><div class="quick" onclick="showPageById('attendance')">📅 Take Attendance</div><div class="quick" onclick="showPageById('marks')">📝 Enter Marks</div><div class="quick" onclick="showPageById('fees')">💰 Fee Collection</div></div></div><div class="panel"><div class="panel-title">System Overview</div><p class="small">This is a frontend-only ERP. Data is stored in this browser using localStorage. No PHP, Node.js, MySQL or API is required.</p><br><div id="dashboardNotice" class="notice"></div></div></div></section>
 <section id="students" class="page"><div class="page-header"><div><h1>Student Management</h1><p>Add, search, edit, view and delete students.</p></div><button class="btn btn-primary admin-only" onclick="openStudentModal()">＋ Add Student</button></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('students')">⬇ Download Excel</button><button class="btn btn-danger" onclick="downloadPDF('students')">⬇ Download PDF</button></div>
 
-<div class="panel"><div class="table-header"><div class="panel-title">Student List</div><div class="search-box"><input id="studentSearch" class="input" placeholder="Search name / ID / class..." oninput="renderStudents()"><select id="studentClassFilter" class="select" onchange="renderStudents()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div></div><div class="table-box student-list-box"><table class="student-list-table"><thead><tr><th>Sr. No.</th><th>Upload Photo</th><th>Admission No.</th><th>Student</th><th>Class</th><th>Section</th><th>Father Name</th><th>Address</th><th>Date of Birth</th><th>Mobile Number</th><th>House</th><th>Status</th><th>Actions / Options</th></tr></thead><tbody id="studentTable"></tbody></table></div></div></section>
+<div class="student-filter-bar"><div class="student-filter-title">Search Student</div><div class="student-filter-controls"><input id="studentSearch" class="input" placeholder="Search by name / ID..." oninput="renderStudents()"><select id="studentClassFilter" class="select" onchange="renderStudents()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div></div>
+
+<div class="panel"><div class="table-header"><div class="panel-title">Student List</div></div><div class="table-box student-list-box"><table class="student-list-table"><thead><tr><th>Sr. No.</th><th>Admission No.</th><th>Student</th><th>Class</th><th>Section</th><th>Father Name</th><th>Address</th><th>Date of Birth</th><th>Mobile Number</th><th>House</th><th>Status</th><th>Actions / Options</th></tr></thead><tbody id="studentTable"></tbody></table></div></div></section>
 <section id="bulkStudents" class="page"><div class="page-header"><div><h1>Bulk Student Upload</h1><p>Excel / CSV से एक साथ students import करें।</p></div></div><div class="panel bulk-panel"><div class="panel-title">📥 Bulk Student Upload</div><p class="small" style="margin:8px 0 15px">आपकी file में Class को I से XII और Section A–J रखें। Roll No. की जरूरत नहीं है।</p><div class="bulk-actions"><label class="btn btn-primary admin-only">📂 Select Excel / CSV <input type="file" id="studentBulkFile" accept=".xlsx,.xls,.csv" onchange="previewBulkStudents(event)" hidden></label><button class="btn btn-info admin-only" onclick="downloadStudentTemplate()">⬇ Download Template</button>
  <select id="bulkMode" class="select" style="max-width:190px">
   <option value="skip">Duplicate ID: Skip</option>
@@ -116,7 +125,7 @@ let auth=load('PG_AUTH',{adminId:'admin',adminPassword:'1234'});let currentRole=
 function selectLoginRole(role){loginRole=role;document.getElementById('adminTab').classList.toggle('active',role==='admin');document.getElementById('studentTab').classList.toggle('active',role==='student');document.getElementById('loginIdLabel').textContent=role==='admin'?'Admin ID':'Student ID';document.getElementById('loginId').placeholder=role==='admin'?'Enter Admin ID':'Enter Student ID';document.getElementById('loginHelp').style.display='none';document.getElementById('loginError').textContent='';}
 function doLogin(){let id=document.getElementById('loginId').value.trim(),pw=document.getElementById('loginPassword').value.trim(),err=document.getElementById('loginError');if(loginRole==='admin'){if(id.toLowerCase()!==String(auth.adminId||'admin').toLowerCase()){err.textContent='❌ Admin ID गलत है।';return}if(pw!==String(auth.adminPassword||'1234')){err.textContent='❌ Password गलत है।';return}currentRole='admin';currentStudentId='';}else{let s=students.find(x=>String(x.id).toLowerCase()===id.toLowerCase());if(!s){err.textContent='❌ Student ID नहीं मिला।';return}if(pw!==String(s.password||'1234')){err.textContent='❌ Password गलत है।';return}currentRole='student';currentStudentId=s.id;}localStorage.setItem('PG_LOGIN_ROLE',currentRole);localStorage.setItem('PG_LOGIN_STUDENT_ID',currentStudentId);document.getElementById('loginScreen').style.display='none';applyRolePermissions();toast(currentRole==='admin'?'Admin login successful':'Student login successful');}
 function applyRolePermissions(){document.body.classList.toggle('student-mode',currentRole==='student');let name=currentRole==='student'?(students.find(s=>s.id===currentStudentId)?.name||currentStudentId):'Administrator';document.getElementById('headerUserName').textContent=name;document.getElementById('headerRole').textContent=currentRole==='student'?'STUDENT':'ADMIN';document.querySelectorAll('.nav-item').forEach(n=>n.style.display=(currentRole==='student'&&n.getAttribute('onclick')?.includes("'bulkStudents'"))?'none':'');document.querySelectorAll('.bulk-submenu').forEach(n=>n.style.display=currentRole==='student'?'none':'');}
-function getVisibleStudents(){return currentRole==='student'?students.filter(s=>s.id===currentStudentId):students}
+function getVisibleStudents(){return students}
 function requireAdmin(){if(currentRole!=='admin'){toast('Student account read-only है');return false}return true}
 function logout(){localStorage.removeItem('PG_LOGIN_ROLE');localStorage.removeItem('PG_LOGIN_STUDENT_ID');location.reload()}
 
@@ -164,6 +173,16 @@ function renderFees(){let q=document.getElementById('feeSearch').value.toLowerCa
 function deleteFee(r){if(!requireAdmin())return;fees=fees.filter(f=>f.receipt!==r);save(KEY.fees,fees);renderFees();refreshAll();toast('Fee record deleted')}
 function renderReports(){let visible=getVisibleStudents(),visibleIds=new Set(visible.map(s=>s.id));document.getElementById('rStudents').textContent=visible.length;let statuses=currentRole==='student'?Object.values(attendance).flatMap(x=>Object.entries(x).filter(([id])=>visibleIds.has(id)).map(([,st])=>st)):Object.values(attendance).flatMap(x=>Object.values(x)),p=statuses.filter(x=>x==='Present').length;document.getElementById('rAttendance').textContent=(statuses.length?(p/statuses.length*100):0).toFixed(1)+'%';let av=marks.filter(m=>visibleIds.has(m.studentId)).map(calcMark);document.getElementById('rMarks').textContent=(av.length?av.reduce((a,x)=>a+x.pct,0)/av.length:0).toFixed(1)+'%';let pending=fees.filter(f=>visibleIds.has(f.studentId)).reduce((a,f)=>a+Math.max(0,f.demand-f.paid),0);document.getElementById('rPending').textContent='₹'+pending;let cls={};visible.forEach(s=>cls[s.className]=(cls[s.className]||0)+1);document.getElementById('classReport').innerHTML=Object.keys(cls).sort((a,b)=>a-b).map(c=>`<p style="margin:10px 0">Class ${c}: <b>${cls[c]}</b> students</p>`).join('')||'<div class="empty">No data</div>';let grades={};av.forEach(x=>grades[x.grade]=(grades[x.grade]||0)+1);document.getElementById('academicReport').innerHTML=Object.keys(grades).map(g=>`<p style="margin:10px 0">Grade ${g}: <b>${grades[g]}</b> record(s)</p>`).join('')||'<div class="empty">No marks data</div>'}
 function printReport(type){let title={student:'Student Report',attendance:'Attendance Report',marks:'Result Report',fees:'Fee Report'}[type],body='';if(type==='student')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Roll No</th><th>ID</th><th>Name</th><th>Class</th><th>Section</th><th>Mobile</th></tr>'+students.map(s=>`<tr><td>${s.rollNo||''}</td><td>${s.id}</td><td>${s.name}</td><td>${s.className}</td><td>${s.section}</td><td>${s.mobile||''}</td></tr>`).join('')+'</table>';if(type==='marks')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Student</th><th>Exam</th><th>Total</th><th>%</th><th>Grade</th></tr>'+marks.map(m=>{let s=visible.find(x=>x.id===m.studentId),x=calcMark(m);return `<tr><td>${s?.name||m.studentId}</td><td>${m.exam}</td><td>${x.total}/500</td><td>${x.pct.toFixed(1)}%</td><td>${x.grade}</td></tr>`}).join('')+'</table>';if(type==='attendance')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Date</th><th>Student</th><th>Status</th></tr>'+Object.entries(attendance).flatMap(([date,d])=>Object.entries(d).map(([id,st])=>`<tr><td>${date}</td><td>${visible.find(s=>s.id===id)?.name||id}</td><td>${st}</td></tr>`)).join('')+'</table>';if(type==='fees')body='<table border="1" cellspacing="0" cellpadding="7" width="100%"><tr><th>Receipt</th><th>Student</th><th>Head</th><th>Demand</th><th>Paid</th><th>Pending</th></tr>'+fees.map(f=>`<tr><td>${f.receipt}</td><td>${visible.find(s=>s.id===f.studentId)?.name||f.studentId}</td><td>${f.head}</td><td>₹${f.demand}</td><td>₹${f.paid}</td><td>₹${Math.max(0,f.demand-f.paid)}</td></tr>`).join('')+'</table>';let w=window.open('','_blank');w.document.write(`<html><head><title>${title}</title><style>body{font-family:Arial;padding:30px}h1{color:#b71c1c}table{border-collapse:collapse;margin-top:20px}th{background:#eee}
+</style></head><body><h1>Patanjali Gurukulam</h1><h2>${title}</h2><p>Generated: ${new Date().toLocaleString()}</p>${body}
+
+
+
+
+
+</body></html>`);w.document.close();w.print()}
+</script>
+
+<style>
 /* Final UI refinements: message search priority, marks section filter, student table one-line columns */
 #messageRecipientSelect option{padding:8px 10px;}
 #studentTable td,#studentTable th{white-space:nowrap;}
@@ -172,10 +191,9 @@ function printReport(type){let title={student:'Student Report',attendance:'Atten
 #students .table-header{min-width:1450px;}
 #uploadMarks .filters{align-items:end;}
 #uploadMarkSection{min-width:140px;}
-</style></head><body><h1>Patanjali Gurukulam</h1><h2>${title}</h2><p>Generated: ${new Date().toLocaleString()}</p>${body}
+</style>
 
-
-</body></html>`);w.document.close();w.print()}
+<script>
 function renderLoginCredentials(){if(currentRole!=='admin')return;document.getElementById('authAdminId').value=auth.adminId||'admin';document.getElementById('authAdminPassword').value=auth.adminPassword||'1234';document.getElementById('studentLoginTable').innerHTML=students.map((s,i)=>`<tr><td><input class="input" id="loginId_${i}" value="${escapeHtml(s.id||'')}" style="min-width:150px"></td><td>${escapeHtml(s.name||'')}</td><td>${escapeHtml(s.id||'')}</td><td><input class="input" id="loginPw_${i}" type="text" value="${escapeHtml(s.password||'1234')}" style="min-width:120px"></td><td><button class="btn btn-success btn-sm" onclick="saveStudentLogin(${i})">Save</button></td></tr>`).join('')||`<tr><td colspan="5" class="empty">No students found.</td></tr>`;}
 function saveAdminCredentials(){if(!requireAdmin())return;let id=document.getElementById('authAdminId').value.trim(),pw=document.getElementById('authAdminPassword').value;if(!id||!pw){toast('Admin ID और password required');return}auth={adminId:id,adminPassword:pw};save('PG_AUTH',auth);toast('Admin login updated')}
 function saveStudentLogin(index){if(!requireAdmin())return;let s=students[index];if(!s)return;let newId=document.getElementById('loginId_'+index).value.trim(),pw=document.getElementById('loginPw_'+index).value;if(!newId||!pw){toast('Student ID और password required');return}if(students.some((x,i)=>i!==index&&String(x.id).toLowerCase()===newId.toLowerCase())){toast('Student ID already exists');return}let oldId=s.id;s.id=newId;s.password=pw;attendance=renameAttendanceStudentId(attendance,oldId,newId);marks.forEach(m=>{if(m.studentId===oldId)m.studentId=newId});fees.forEach(f=>{if(f.studentId===oldId)f.studentId=newId});save(KEY.students,students);save(KEY.attendance,attendance);save(KEY.marks,marks);save(KEY.fees,fees);renderLoginCredentials();renderStudents();refreshAll();toast('Student login updated')}
@@ -1420,7 +1438,7 @@ setTimeout(async()=>{
 </script>
 <script type="module">
 /* Firebase message transport */
-import { getDocs, collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import { getDocs, collection, setDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 const waitForDB=async()=>{for(let i=0;i<50;i++){if(window.firebaseDB)return window.firebaseDB;await new Promise(r=>setTimeout(r,100));}return null};
 const db=await waitForDB();
 window.firebaseMessagingAPI={
@@ -1428,6 +1446,21 @@ window.firebaseMessagingAPI={
   async load(){if(!db)return [];const snap=await getDocs(collection(db,'messages'));return snap.docs.map(d=>({...d.data(),id:d.id}));}
 };
 if(window.currentRole){try{window.renderMessages?.()}catch(e){}}
+
+// Real-time unread-message listener: no 7-second waiting for new messages.
+try{
+  const {onSnapshot}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');
+  if(db){
+    let firstSnapshot=true;
+    onSnapshot(collection(db,'messages'),snap=>{
+      const list=snap.docs.map(d=>({...d.data(),id:d.id}));
+      localStorage.setItem('PG_MESSAGES',JSON.stringify(list));
+      if(window.currentRole){try{window.__pgShowUnread?.(list)}catch(e){}}
+      if(window.currentRole && document.getElementById('messages')?.classList.contains('active')){try{window.__pgRefreshMessagesView?.()}catch(e){}}
+      if(firstSnapshot)firstSnapshot=false;
+    },err=>console.warn('Realtime message listener:',err));
+  }
+}catch(e){console.warn('Realtime messaging unavailable:',e)}
 </script>
 
 <script type="module">
@@ -1690,22 +1723,7 @@ if(await waitForFirebase()){
     const visible=typeof getVisibleStudents==='function'?getVisibleStudents():getStudents();
     const arr=visible.filter(s=>(!q||[s.id,s.name,s.father,s.className,s.section,s.address,s.dob,s.mobile,s.house].join(' ').toLowerCase().includes(q))&&(!c||s.className===c));
     const body=document.getElementById('studentTable');if(!body)return;
-    body.innerHTML=arr.length?arr.map((s,i)=>{const st=s.status||'Active';return `<tr><td>${i+1}</td><td><button type="button" class="photo-upload-btn admin-only" title="Upload Student Photo" onclick="document.getElementById('photoUpload_${esc(s.id)}').click()">${s.photo?'<img src="'+esc(s.photo)+'" class="student-row-photo" alt="Student Photo">':'📷'}</button><input id="photoUpload_${esc(s.id)}" type="file" accept="image/*" style="display:none" onchange="uploadStudentPhoto(this, '${esc(s.id)}')"></td><td>${esc(s.id||'')}</td><td><b>${esc(s.name||'')}</b></td><td>${esc(s.className||'')}</td><td>${esc(s.section||'')}</td><td>${esc(s.father||'')}</td><td>${esc(s.address||'')}</td><td>${esc(s.dob||'')}</td><td>${esc(s.mobile||'')}</td><td>${esc(s.house||'')}</td><td><span class="badge ${st==='Active'?'paid':'unpaid'}">${esc(st)}</span></td><td><div class="actions"><button class="btn btn-info btn-sm" onclick="viewStudent('${esc(s.id)}')">View</button><button class="btn btn-warning btn-sm admin-only" onclick="openStudentModal('${esc(s.id)}')">Edit</button><button class="btn btn-danger btn-sm admin-only" onclick="deleteStudent('${esc(s.id)}')">Delete</button></div></td></tr>`}).join(''):`<tr><td colspan="13" class="empty">No students found.</td></tr>`;
-  };
-
-  window.uploadStudentPhoto=async function(input,id){
-    if(typeof requireAdmin==='function'&&!requireAdmin())return;
-    const file=input?.files?.[0];if(!file)return;
-    if(!file.type.startsWith('image/')){toastMsg('कृपया image file चुनें।');input.value='';return;}
-    if(file.size>5*1024*1024){toastMsg('Photo अधिकतम 5 MB की हो सकती है।');input.value='';return;}
-    const reader=new FileReader();
-    reader.onload=async function(e){
-      const arr=getStudents();const i=arr.findIndex(x=>String(x.id)===String(id));if(i<0)return;
-      arr[i].photo=e.target.result;window.students=arr;localStorage.setItem('PG_STUDENTS',JSON.stringify(arr));
-      try{await window.firebaseStudentAPI?.saveStudent?.(arr[i]);}catch(err){console.warn(err)}
-      renderStudents();toastMsg('Student photo uploaded successfully');
-    };
-    reader.readAsDataURL(file);
+    body.innerHTML=arr.length?arr.map((s,i)=>{const st=s.status||'Active';return `<tr><td>${i+1}</td><td>${esc(s.id||'')}</td><td><b>${esc(s.name||'')}</b></td><td>${esc(s.className||'')}</td><td>${esc(s.section||'')}</td><td>${esc(s.father||'')}</td><td>${esc(s.address||'')}</td><td>${esc(s.dob||'')}</td><td>${esc(s.mobile||'')}</td><td>${esc(s.house||'')}</td><td><span class="badge ${st==='Active'?'paid':'unpaid'}">${esc(st)}</span></td><td><div class="actions"><button class="btn btn-info btn-sm" onclick="viewStudent('${esc(s.id)}')">View</button><button class="btn btn-warning btn-sm admin-only" onclick="openStudentModal('${esc(s.id)}')">Edit</button><button class="btn btn-danger btn-sm admin-only" onclick="deleteStudent('${esc(s.id)}')">Delete</button></div></td></tr>`}).join(''):`<tr><td colspan="12" class="empty">No students found.</td></tr>`;
   };
 
   /* ---------- Multiple subject selection ---------- */
@@ -1738,7 +1756,7 @@ if(await waitForFirebase()){
     const rows=pgMarkRows.map((r,i)=>{const m=r.mark||{};let total=0,maxTotal=0;const cells=subs.map(k=>{const got=getMark(m,k),max=getMax(m,k,def);total+=got;maxTotal+=max;return `<td><input class="input ms-obtain" data-id="${esc(r.student.id)}" data-subject="${esc(k)}" type="number" min="0" max="${max}" value="${got}" oninput="updateMultiMarksSummary('${esc(r.student.id)}')"></td><td><input class="input ms-max" data-id="${esc(r.student.id)}" data-subject="${esc(k)}" type="number" min="1" value="${max}" oninput="updateMultiMarksSummary('${esc(r.student.id)}')"></td>`}).join('');const pct=maxTotal?total/maxTotal*100:0;return `<tr><td>${i+1}</td><td>${esc(r.student.id)}</td><td><b>${esc(r.student.name)}</b></td>${cells}<td id="ms-total-${esc(r.student.id)}">${total}</td><td id="ms-pct-${esc(r.student.id)}">${pct.toFixed(2)}%</td><td>${grade(pct)}</td></tr>`}).join('');
     box.innerHTML=`<table style="min-width:${500+subs.length*150}px"><thead><tr><th rowspan="2">Sr.</th><th rowspan="2">Student ID</th><th rowspan="2">Student Name</th>${h}<th rowspan="2">Total</th><th rowspan="2">Percentage</th><th rowspan="2">Grade</th></tr><tr>${h2}</tr></thead><tbody>${rows}</tbody></table>`;
   }
-  window.updateMultiMarksSummary=function(id){const subs=selectedSubjects();let total=0,maxTotal=0;subs.forEach(k=>{const got=+(document.querySelector(`.ms-obtain[data-id="${CSS.escape(id)}"][data-subject="${CSS.escape(k)}"]`)?.value||0),max=+(document.querySelector(`.ms-max[data-id="${CSS.escape(id)}"][data-subject="${CSS.escape(k)}"]`)?.value||100);total+=got;maxTotal+=max});const pct=maxTotal?total/maxTotal*100:0;const a=document.getElementById('ms-total-'+id),b=document.getElementById('ms-pct-'+id);if(a)a.textContent=total;if(b)b.textContent=pct.toFixed(2)+'%';};
+  window.updateMultiMarksSummary=function(id){const subs=selectedSubjects();let total=0,maxTotal=0;subs.forEach(k=>{const gotEl=document.querySelector(`.ms-obtain[data-id="${CSS.escape(id)}"][data-subject="${CSS.escape(k)}"]`),maxEl=document.querySelector(`.ms-max[data-id="${CSS.escape(id)}"][data-subject="${CSS.escape(k)}"]`);let got=Number(gotEl?.value||0),max=Number(maxEl?.value||100);if(!Number.isFinite(got)||got<0)got=0;if(!Number.isFinite(max)||max<=0)max=100;if(got>max){got=max;if(gotEl)gotEl.value=String(max)}total+=got;maxTotal+=max});const pct=maxTotal>0?Math.min(100,(total/maxTotal)*100):0;const a=document.getElementById('ms-total-'+id),b=document.getElementById('ms-pct-'+id);if(a)a.textContent=String(total);if(b)b.textContent=pct.toFixed(2)+'%';const row=b?.closest('tr');const cells=row?.querySelectorAll('td');if(cells?.length)cells[cells.length-1].textContent=typeof grade==='function'?grade(pct):'';};
   window.saveMarksheetMarks=async function(){
     if(typeof requireAdmin==='function'&&!requireAdmin())return;const subs=selectedSubjects(),exam=document.getElementById('uploadMarkExam')?.value; if(!pgMarkRows.length||!subs.length){toastMsg('पहले Class + Subjects चुनकर Import Students करें।');return;}
     const arr=getMarks();
@@ -1801,9 +1819,9 @@ if(await waitForFirebase()){
   function saveAdmins(a){localStorage.setItem('PG_ADMINS',JSON.stringify(a));}
   async function syncAdmins(){try{if(!window.firebaseDB)return;const {getDocs,collection}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');const snap=await getDocs(collection(window.firebaseDB,'erp_admins'));const online=snap.docs.map(d=>({...d.data(),id:d.id}));if(online.length){saveAdmins(online)}}catch(e){console.warn('Admin online sync:',e)}}
   window.renderAdminUsers=function(){const box=document.getElementById('adminUsersTable');if(!box)return;const a=localAdmins();box.innerHTML='<div class="panel-title" style="font-size:14px">Current Admin Users</div><table><thead><tr><th>Admin ID</th><th>Role</th><th>Action</th></tr></thead><tbody>'+a.map((x,i)=>`<tr><td><b>${esc(x.id)}</b></td><td>${x.main?'Main Admin':'Admin'}</td><td>${x.main?'<span class="badge paid">Protected</span>':`<button class="btn btn-danger btn-sm" onclick="deleteAdminUser('${esc(x.id)}')">Delete</button>`}</td></tr>`).join('')+'</tbody></table>'}
-  window.createAdminUser=async function(){if(role()!=='admin'){toastMsg('Only Admin can create another Admin.');return}const id=document.getElementById('newAdminId')?.value.trim(),pw=document.getElementById('newAdminPassword')?.value;if(!id||pw.length<4){toastMsg('Admin ID और कम से कम 4 character password दें।');return}const a=localAdmins();if(a.some(x=>String(x.id).toLowerCase()===id.toLowerCase())){toastMsg('यह Admin ID पहले से मौजूद है।');return}const item={id,password:pw,main:false};a.push(item);saveAdmins(a);try{if(window.firebaseDB){const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await setDoc(doc(window.firebaseDB,'erp_admins',id),item)}}catch(e){console.warn(e)}document.getElementById('newAdminId').value='';document.getElementById('newAdminPassword').value='';renderAdminUsers();toastMsg('✅ New Admin user created');}
-  window.deleteAdminUser=async function(id){if(role()!=='admin')return;const a=localAdmins();const x=a.find(z=>String(z.id)===String(id));if(x?.main){toastMsg('Main Admin delete नहीं किया जा सकता।');return}if(!confirm('Delete Admin '+id+'?'))return;saveAdmins(a.filter(z=>String(z.id)!==String(id)));try{if(window.firebaseDB){const {deleteDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await deleteDoc(doc(window.firebaseDB,'erp_admins',id))}}catch(e){console.warn(e)}renderAdminUsers();toastMsg('Admin deleted');}
-  window.saveAdminCredentials=async function(){if(role()!=='admin'){toastMsg('Only Admin');return}const id=document.getElementById('authAdminId')?.value.trim(),pw=document.getElementById('authAdminPassword')?.value;if(!id||!pw){toastMsg('Admin ID और password required');return}const a=localAdmins().filter(x=>!x.main);a.unshift({id,password:pw,main:true});saveAdmins(a);localStorage.setItem('PG_AUTH',JSON.stringify({adminId:id,adminPassword:pw}));try{if(window.firebaseDB){const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await setDoc(doc(window.firebaseDB,'erp_admins',id),{id,password:pw,main:true})}}catch(e){}renderAdminUsers();toastMsg('Main Admin login updated');}
+  window.createAdminUser=async function(){if(getRole2()!=='admin'||!isMainAdmin2()){toastMsg('🔒 केवल Main Admin नया Admin बना सकता है।');return}const id=document.getElementById('newAdminId')?.value.trim(),pw=document.getElementById('newAdminPassword')?.value;if(!id||pw.length<4){toastMsg('Admin ID और कम से कम 4 character password दें।');return}const a=localAdmins();if(a.some(x=>String(x.id).toLowerCase()===id.toLowerCase())){toastMsg('यह Admin ID पहले से मौजूद है।');return}const access={...blankAccess()};document.querySelectorAll('[data-new-admin-access]').forEach(cb=>{access[cb.getAttribute('data-new-admin-access')]=!!cb.checked});const item={id,password:pw,main:false};a.push(item);saveAdmins(a);setAccessLocal(id,access);await saveAccessCloud(id,access);try{if(window.firebaseDB){const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await setDoc(doc(window.firebaseDB,'erp_admins',id),item)}}catch(e){console.warn(e)}document.getElementById('newAdminId').value='';document.getElementById('newAdminPassword').value='';document.querySelectorAll('[data-new-admin-access]').forEach(cb=>cb.checked=false);renderAdminUsers();renderAccessPanel();applyAccessUI();toastMsg('✅ Second Admin created with selected module access');}
+  window.deleteAdminUser=async function(id){if(role()!=='admin'||!isMainAdmin2()){toastMsg('🔒 केवल Main Admin Admin users manage कर सकता है।');return;}const a=localAdmins();const x=a.find(z=>String(z.id)===String(id));if(x?.main){toastMsg('Main Admin delete नहीं किया जा सकता।');return}if(!confirm('Delete Admin '+id+'?'))return;saveAdmins(a.filter(z=>String(z.id)!==String(id)));try{if(window.firebaseDB){const {deleteDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await deleteDoc(doc(window.firebaseDB,'erp_admins',id))}}catch(e){console.warn(e)}renderAdminUsers();toastMsg('Admin deleted');}
+  window.saveAdminCredentials=async function(){if(role()!=='admin'||!isMainAdmin2()){toastMsg('🔒 केवल Main Admin login manage कर सकता है।');return}const id=document.getElementById('authAdminId')?.value.trim(),pw=document.getElementById('authAdminPassword')?.value;if(!id||!pw){toastMsg('Admin ID और password required');return}const a=localAdmins().filter(x=>!x.main);a.unshift({id,password:pw,main:true});saveAdmins(a);localStorage.setItem('PG_AUTH',JSON.stringify({adminId:id,adminPassword:pw}));try{if(window.firebaseDB){const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await setDoc(doc(window.firebaseDB,'erp_admins',id),{id,password:pw,main:true})}}catch(e){}renderAdminUsers();toastMsg('Main Admin login updated');}
   window.doLogin=async function(){
     const id=document.getElementById('loginId').value.trim(),pw=document.getElementById('loginPassword').value.trim(),err=document.getElementById('loginError');err.textContent='';
     if(loginRole==='admin'){
@@ -1812,6 +1830,8 @@ if(await waitForFirebase()){
       const s=getStudents().find(x=>String(x.id).toLowerCase()===id.toLowerCase());if(!s){err.textContent='❌ Student ID नहीं मिला।';return}if(pw!==String(s.password||'1234')){err.textContent='❌ Password गलत है।';return}currentRole='student';currentStudentId=s.id;window.currentRole='student';window.currentStudentId=s.id;
     }
     localStorage.setItem('PG_LOGIN_ROLE',currentRole);localStorage.setItem('PG_LOGIN_STUDENT_ID',currentStudentId);document.getElementById('loginScreen').style.display='none';applyRolePermissions();toastMsg(currentRole==='admin'?'Admin login successful':'Student login successful');
+    /* Immediately check the logged-in user's messages after login, so a new message is visible without waiting for polling. */
+    setTimeout(()=>{try{checkMessages()}catch(e){}},120);
   };
 
   /* ---------- Messaging: Name/ID selector + broadcast ---------- */
@@ -1877,4 +1897,186 @@ if(await waitForFirebase()){
 })();
 
 </script>
-</body></html>
+<style id="erp-final-hardening">
+/* Final ERP hardening + compact student table */
+.student-list-box{overflow-x:auto;overflow-y:auto;max-width:100%;}
+.student-list-table{width:max-content;min-width:100%;table-layout:auto;border-collapse:collapse;}
+.student-list-table th,.student-list-table td{white-space:nowrap;padding:7px 9px;vertical-align:middle;}
+.student-list-table th:nth-child(1){width:55px}.student-list-table th:nth-child(2){width:88px}.student-list-table th:nth-child(3){min-width:125px}.student-list-table th:nth-child(4){min-width:160px}.student-list-table th:nth-child(5),.student-list-table th:nth-child(6){min-width:70px}.student-list-table th:nth-child(7){min-width:140px}.student-list-table th:nth-child(8){min-width:180px}.student-list-table th:nth-child(9){min-width:110px}.student-list-table th:nth-child(10){min-width:125px}.student-list-table th:nth-child(11){min-width:105px}.student-list-table th:nth-child(12){min-width:85px}.student-list-table th:nth-child(13){min-width:145px}
+.student-photo-cell{width:54px;height:54px;border-radius:8px;object-fit:cover;border:1px solid #d8dee8;background:#f3f6fa;display:block}
+.student-photo-upload{width:34px;height:34px;border-radius:8px;border:1px solid #d7deea;background:#fff;cursor:pointer;font-size:17px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.student-photo-upload:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.12)}
+.student-access-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}
+.student-access-grid label{display:flex;align-items:center;gap:7px;padding:8px 9px;border:1px solid #e3e8ef;border-radius:8px;background:#fafcff;font-size:12px}
+.admin-access-panel{margin-top:20px}.admin-access-row{border:1px solid #e4e9f0;border-radius:10px;padding:12px;margin-top:10px;background:#fff}.admin-access-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.admin-access-head b{font-size:14px}.message-unread-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;font-weight:800}.erp-notification-banner{position:fixed;right:20px;top:76px;z-index:9999;max-width:360px;padding:13px 16px;border-radius:12px;background:#111827;color:#fff;box-shadow:0 12px 35px rgba(0,0,0,.25);display:none}.erp-notification-banner.show{display:block}.security-note{font-size:11px;line-height:1.5;color:#667085;margin-top:8px}
+@media(max-width:700px){.student-list-table th,.student-list-table td{padding:6px 7px}.erp-notification-banner{right:10px;left:10px;top:70px;max-width:none}}
+</style>
+<div id="erpNotificationBanner" class="erp-notification-banner"></div>
+<script>
+(function(){
+'use strict';
+const ACCESS_KEY='PG_ADMIN_ACCESS';
+const ACCESS_PAGES=[['dashboard','Dashboard'],['students','Students'],['attendance','Attendance'],['marks','Marks'],['uploadMarks','Upload Marks'],['results','Results'],['fees','Fees'],['reports','Reports'],['messages','Messages'],['settings','Settings']];
+const $=id=>document.getElementById(id);
+const esc2=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const getStudents2=()=>Array.isArray(window.students)?window.students:[];
+const getRole2=()=>window.currentRole||'';
+const adminId2=()=>localStorage.getItem('PG_ADMIN_ID')||'admin';
+function readAccess(){try{return JSON.parse(localStorage.getItem(ACCESS_KEY)||'{}')}catch(e){return {}}}
+function defaultAccess(){const o={};ACCESS_PAGES.forEach(x=>o[x[0]]=true);return o}
+function isMainAdmin2(id=adminId2()){const a=typeof localAdmins==='function'?localAdmins():[];const m=a.find(x=>x&&x.main===true);return String(id||'').toLowerCase()===String(m?.id||'admin').toLowerCase()}
+function blankAccess(){const o={};ACCESS_PAGES.forEach(x=>o[x[0]]=false);return o}
+function getAccess(id=adminId2()){if(isMainAdmin2(id))return defaultAccess();const a=readAccess();return a[id]||blankAccess()}
+async function syncAccessFromCloud(id=adminId2()){try{if(!window.firebaseDB||!id)return;const {getDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');const snap=await getDoc(doc(window.firebaseDB,'erp_admin_access',String(id)));if(snap.exists()){const data=snap.data()?.access;if(data&&typeof data==='object'){const all=readAccess();all[id]=Object.assign(blankAccess(),data);localStorage.setItem(ACCESS_KEY,JSON.stringify(all));}}}catch(e){console.warn('Admin access sync:',e)}}
+function setAccessLocal(id,access){const all=readAccess();all[id]=Object.assign(blankAccess(),access||{});localStorage.setItem(ACCESS_KEY,JSON.stringify(all));}
+async function saveAccessCloud(id,access){try{if(!window.firebaseDB||!id)return;const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js');await setDoc(doc(window.firebaseDB,'erp_admin_access',String(id)),{id:String(id),access:Object.assign(blankAccess(),access||{})},{merge:true})}catch(e){console.warn('Admin access save:',e)}}
+function hasAccess(page){return getRole2()!=='admin'||isMainAdmin2()||!!getAccess()[page]}
+window.erpHasAccess=hasAccess;
+window.erpSetAccess=function(id,page,val){if(getRole2()!=='admin'||!isMainAdmin2())return;const all=readAccess();all[id]=Object.assign(blankAccess(),all[id]||{}, {[page]:!!val});setAccessLocal(id,all[id]);saveAccessCloud(id,all[id]);applyAccessUI();};
+function applyAccessUI(){if(getRole2()!=='admin')return;document.querySelectorAll('.nav-item[onclick]').forEach(n=>{const m=n.getAttribute('onclick')?.match(/showPage\('([^']+)'/);if(m&&m[1])n.style.display=hasAccess(m[1])?'':'none'});}
+function ensureAccessPanel(){if(!isMainAdmin2())return;const settings=$('settings');if(!settings)return;const grid=settings.querySelector('.settings-grid');if(!grid)return;
+if(!$('adminCreatePanel')){const create=document.createElement('div');create.id='adminCreatePanel';create.className='panel admin-access-panel admin-only';create.innerHTML='<div class="panel-title">➕ Create Second Admin</div><p class="small">Main Admin यहाँ नया Admin बना सकता है और उसी समय उसके module access तय कर सकता है। बाद में नीचे से permissions बदली भी जा सकती हैं।</p><div class="form-grid" style="grid-template-columns:1fr 1fr"><div class="form-group"><label>New Admin ID</label><input id="newAdminId" class="input" autocomplete="off" placeholder="e.g. admin2"></div><div class="form-group"><label>Password</label><input id="newAdminPassword" type="password" class="input" autocomplete="new-password" placeholder="Minimum 4 characters"></div></div><div style="margin-top:12px"><label class="small"><b>Module Access</b></label><div id="newAdminAccessGrid" class="student-access-grid"></div></div><button class="btn btn-primary" style="margin-top:12px" onclick="createAdminUser()">➕ Create Admin</button>';grid.appendChild(create);renderNewAdminAccess();}
+if(!$('adminAccessPanel')){const panel=document.createElement('div');panel.id='adminAccessPanel';panel.className='panel admin-access-panel admin-only';panel.innerHTML='<div class="panel-title">🛡️ Admin Module Access Control</div><p class="small">Main Admin तय कर सकता है कि किस Second Admin को कौन-सा module access मिले। Second Admin को selected modules में केवल View / Details access मिलेगा। Main Admin को सभी permissions रहती हैं।</p><div id="adminAccessRows"></div><div class="security-note">Note: यह frontend permission layer है। वास्तविक cloud security के लिए Firebase Authentication और Firestore Security Rules भी जरूरी हैं।</div>';grid.appendChild(panel);}
+renderNewAdminAccess();renderAccessPanel()}
+function renderNewAdminAccess(){const box=$('newAdminAccessGrid');if(!box)return;box.innerHTML=ACCESS_PAGES.map(([k,l])=>'<label><input type="checkbox" data-new-admin-access="'+esc2(k)+'"> '+esc2(l)+'</label>').join('')}
+function renderAccessPanel(){const box=$('adminAccessRows');if(!box||getRole2()!=='admin')return;const admins=typeof localAdmins==='function'?localAdmins():[];box.innerHTML=admins.map(a=>{const ac=a.main?defaultAccess():getAccess(a.id);return '<div class="admin-access-row"><div class="admin-access-head"><b>👤 '+esc2(a.id)+(a.main?' • Main Admin':' • Admin')+'</b>'+(a.main?'<span class="badge paid">All Access</span>':'<span class="small">Select permissions below</span>')+'</div><div class="student-access-grid">'+ACCESS_PAGES.map(([k,l])=>'<label><input type="checkbox" '+(ac[k]?'checked':'')+' '+(a.main?'disabled':'')+' onchange="erpSetAccess(\''+esc2(a.id)+'\',\''+k+'\',this.checked)"> '+esc2(l)+'</label>').join('')+'</div></div>'}).join('')||'<div class="small">No admin users found.</div>'}
+window.renderAdminAccessPanel=renderAccessPanel;
+
+/* Students: students can VIEW every student, but cannot mutate anything. */
+window.getVisibleStudents=function(){return getStudents2()};
+window.renderStudents=function(){
+ const q=($('studentSearch')?.value||'').trim().toLowerCase(), c=$('studentClassFilter')?.value||'';
+ const arr=getStudents2().filter(s=>(!q||[s.id,s.name,s.father,s.className,s.section,s.mobile,s.house,s.address].join(' ').toLowerCase().includes(q))&&(!c||String(s.className)===String(c)));
+ const tb=$('studentTable'); if(!tb)return;
+ const mainAdmin=typeof isMainAdmin2==='function'&&isMainAdmin2();
+ tb.innerHTML=arr.length?arr.map((s,i)=>'<tr><td>'+ (i+1) +'</td><td><b>'+esc2(s.id)+'</b></td><td><div style="display:flex;align-items:center;gap:8px">'+(s.photo?'<img loading="lazy" class="student-photo-cell" src="'+esc2(s.photo)+'" alt="Photo">':'<div class="student-photo-cell" style="display:flex;align-items:center;justify-content:center;font-size:20px">👤</div>')+'<b>'+esc2(s.name)+'</b></div></td><td>'+esc2(s.className)+'</td><td>'+esc2(s.section)+'</td><td>'+esc2(s.father||'')+'</td><td>'+esc2(s.address||'')+'</td><td>'+esc2(s.dob||'')+'</td><td>'+esc2(s.mobile||'')+'</td><td>'+esc2(s.house||'')+'</td><td><span class="badge '+(s.status==='Inactive'?'unpaid':'paid')+'">'+esc2(s.status||'Active')+'</span></td><td><div class="actions"><button class="btn btn-info btn-sm" onclick="viewStudent(\''+esc2(s.id)+'\')">View</button>'+(mainAdmin?'<button class="btn btn-warning btn-sm" onclick="openStudentModal(\''+esc2(s.id)+'\')">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteStudent(\''+esc2(s.id)+'\')">Delete</button>':'')+'</div></td></tr>').join(''):'<tr><td colspan="12" class="empty">No students found.</td></tr>';
+};
+
+/* Add Student photo upload: compressed before saving to keep ERP fast. */
+function addPhotoField(){const form=$('studentModal')?.querySelector('form');if(!form||$('sPhoto'))return;const grid=form.querySelector('.form-grid');if(!grid)return;const wrap=document.createElement('div');wrap.className='form-group';wrap.innerHTML='<label>Student Photo</label><input id="sPhoto" class="input" type="file" accept="image/jpeg,image/png,image/webp"><div id="sPhotoPreview" class="small" style="margin-top:5px">Optional • JPG/PNG/WebP • max 5 MB</div>';grid.insertBefore(wrap,grid.children[2]||null);$('sPhoto').addEventListener('change',function(){const f=this.files?.[0];if(f){$('sPhotoPreview').textContent='Selected: '+f.name}else $('sPhotoPreview').textContent='Optional • JPG/PNG/WebP • max 5 MB'});}
+window.chooseStudentPhoto=function(id){if(getRole2()!=='admin'){try{toast('Student account read-only है')}catch(e){}return}let inp=$('studentRowPhotoInput');if(!inp){inp=document.createElement('input');inp.id='studentRowPhotoInput';inp.type='file';inp.accept='image/jpeg,image/png,image/webp';inp.hidden=true;document.body.appendChild(inp)}inp.onchange=async()=>{const f=inp.files?.[0];inp.value='';if(!f)return;try{const data=await compressPhoto(f);const a=getStudents2();const x=a.find(s=>String(s.id)===String(id));if(x){x.photo=data;localStorage.setItem('PG_STUDENTS',JSON.stringify(a));window.students=a;renderStudents();try{window.firebaseStudentSync?.(x)}catch(e){}toast('📷 Student photo updated')} }catch(e){toast(e.message||'Photo upload failed')}};inp.click()};
+function compressPhoto(file){return new Promise((resolve,reject)=>{if(file.size>5*1024*1024)return reject(new Error('Photo maximum 5 MB है।'));const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const max=700,scale=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));const ctx=c.getContext('2d');ctx.drawImage(img,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.78))};img.onerror=()=>reject(new Error('Invalid image'));img.src=e.target.result};r.onerror=()=>reject(new Error('Photo read failed'));r.readAsDataURL(file)})}
+window.openStudentModal=function(id=''){if(getRole2()!=='admin'){toast('Student account read-only है');return}if(typeof addPhotoField==='function')addPhotoField();const s=getStudents2().find(x=>x.id===id);$('studentModalTitle').textContent=id?'Edit Student':'Add Student';$('editStudentId').value=id;$('sId').value=s?.id||'PG'+new Date().getFullYear()+String(Date.now()).slice(-5);$('sName').value=s?.name||'';$('sFather').value=s?.father||'';$('sMother').value=s?.mother||'';$('sClass').value=s?.className||'';$('sSection').value=s?.section||'';$('sDob').value=s?.dob||'';$('sHouse').value=s?.house||'';$('sMobile').value=s?.mobile||'';$('sAddress').value=s?.address||'';if($('sPhoto'))$('sPhoto').value='';if($('sPhotoPreview'))$('sPhotoPreview').textContent=s?.photo?'Current photo saved • choose a new file to replace it':'Optional • JPG/PNG/WebP • max 5 MB';openModal('studentModal')};
+window.saveStudent=async function(e){if(getRole2()!=='admin'){toast('Student account read-only है');return}e.preventDefault();const old=$('editStudentId').value;const a=getStudents2();const existing=a.find(x=>x.id===old);let photo=existing?.photo||'';const f=$('sPhoto')?.files?.[0];if(f){try{photo=await compressPhoto(f)}catch(err){toast(err.message);return}}const s={...(existing||{}),password:existing?.password||'1234',id:$('sId').value.trim(),name:$('sName').value.trim(),father:$('sFather').value.trim(),mother:$('sMother').value.trim(),dob:$('sDob').value||'',house:$('sHouse').value.trim(),className:$('sClass').value,section:$('sSection').value,mobile:$('sMobile').value.trim(),address:$('sAddress').value.trim(),photo};if(!s.id||!s.name||!s.className||!s.section){toast('Required fields भरें');return}if(!old&&a.some(x=>String(x.id).toLowerCase()===s.id.toLowerCase())){toast('Student ID already exists');return}if(old){const i=a.findIndex(x=>String(x.id)===String(old));if(i>=0)a[i]=s}else a.push(s);localStorage.setItem('PG_STUDENTS',JSON.stringify(a));window.students=a;closeModal('studentModal');renderStudents();if(typeof refreshAll==='function')refreshAll();toast('Student saved successfully')};
+
+/* Message notification: badge + immediate banner when unread messages exist. */
+function unreadMessages(list){const r=getRole2(),id=r==='student'?(window.currentStudentId||''):adminId2();return (Array.isArray(list)?list:[]).filter(m=>m&&m.read!==true&&((r==='student'&&String(m.receiverId)===String(id))||(r==='admin'&&String(m.receiverRole)==='admin'&&String(m.receiverId||'admin')===String(id))));}
+function showUnread(list){const unread=unreadMessages(list),n=unread.length;let nav=[...document.querySelectorAll('.nav-item')].find(x=>x.getAttribute('onclick')?.includes("'messages'"));if(nav){let b=nav.querySelector('.message-unread-badge');if(n&&!b){b=document.createElement('span');b.className='message-unread-badge';nav.appendChild(b)}if(b)b.textContent=n||'';if(b&&!n)b.remove()}if(n){try{document.title='('+n+') New Message • Patanjali ERP'}catch(e){}let shown=[];try{shown=JSON.parse(localStorage.getItem('PG_MSG_ALERT_IDS')||'[]')}catch(e){}const ids=unread.map(m=>String(m.id)),fresh=unread.filter(m=>!shown.includes(String(m.id)));if(fresh.length){const banner=$('erpNotificationBanner');if(banner){banner.innerHTML='💬 <b>'+fresh.length+' new message'+(fresh.length>1?'s':'')+'</b><br><span style="font-size:12px;opacity:.85">Messages section खोलकर देखें।</span>';banner.classList.add('show');setTimeout(()=>banner.classList.remove('show'),7000)}localStorage.setItem('PG_MSG_ALERT_IDS',JSON.stringify([...new Set([...shown,...ids])].slice(-300)))}}else{try{document.title='Patanjali Gurukulam ERP'}catch(e){}}}
+window.__pgShowUnread=showUnread;
+async function checkMessages(){try{let list=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]');if(window.firebaseMessagingAPI?.load){const online=await window.firebaseMessagingAPI.load();if(online.length){list=online;localStorage.setItem('PG_MESSAGES',JSON.stringify(list))}}showUnread(list)}catch(e){showUnread([])}}
+window.markMessageNotificationsRead=async function(){let list=[];try{list=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]')}catch(e){}const r=getRole2(),id=r==='student'?window.currentStudentId:adminId2(),mine=m=>((r==='student'&&String(m.receiverId)===String(id))||(r==='admin'&&m.receiverRole==='admin'&&String(m.receiverId||'admin')===String(id)));const unread=list.filter(m=>mine(m)&&m.read!==true);list=list.map(m=>mine(m)?{...m,read:true}:m);localStorage.setItem('PG_MESSAGES',JSON.stringify(list));if(window.firebaseDB&&unread.length){for(const m of unread){try{await updateDoc(doc(window.firebaseDB,'messages',String(m.id)),{read:true})}catch(e){try{await setDoc(doc(window.firebaseDB,'messages',String(m.id)),{read:true},{merge:true})}catch(e2){}}}}showUnread(list)};
+
+/* Faster search: debounce repeated keystrokes. */
+let searchTimer;document.addEventListener('input',e=>{if(e.target?.id==='studentSearch'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>window.renderStudents(),80)}});
+
+/* Wrap admin login to track the admin identity for access control. */
+const oldLogin=window.doLogin;window.doLogin=async function(){await oldLogin?.();if(getRole2()==='admin'){const id=$('loginId')?.value.trim()||'admin';localStorage.setItem('PG_ADMIN_ID',id);await syncAccessFromCloud(id);applyAccessUI();ensureAccessPanel();renderAccessPanel();checkMessages()}};
+/* When Messages opens, clear its unread indicator. */
+const oldShowPage=window.showPage;window.showPage=function(id,el){if(getRole2()==='admin'&&!hasAccess(id)){toast('इस Admin user को इस module का access नहीं है।');return}if(getRole2()==='student'&&id==='bulkStudents'){toast('Student account read-only है');return}oldShowPage?.(id,el);if(id==='settings'){setTimeout(()=>{ensureAccessPanel();renderAccessPanel()},80)}if(id==='messages'){setTimeout(()=>window.markMessageNotificationsRead(),300)}};
+
+/* Hide password columns in student login management for safer UI. */
+function hardenPasswordTable(){document.querySelectorAll('#studentLoginTable tr').forEach(tr=>{if(tr.cells?.length>=4)tr.cells[3].textContent='••••••••'})}
+setInterval(()=>{applyAccessUI();if(getRole2())checkMessages();hardenPasswordTable()},30000);
+setTimeout(()=>{addPhotoField();applyAccessUI();if(getRole2()==='admin'){localStorage.setItem('PG_ADMIN_ID',localStorage.getItem('PG_ADMIN_ID')||'admin');ensureAccessPanel();renderAccessPanel()}window.renderStudents?.();checkMessages()},500);
+})();
+</script>
+
+
+<script>
+/* FINAL ACCESS HARDENING: Main Admin = full control; Secondary Admins = VIEW ONLY. */
+(function(){
+  const mainAdmin=()=>{try{if(window.currentRole!=='admin')return false;const a=typeof localAdmins==='function'?localAdmins():[];const m=a.find(x=>x&&x.main===true);const id=String(localStorage.getItem('PG_ADMIN_ID')||'admin').toLowerCase();return id===String(m?.id||'admin').toLowerCase()}catch(e){return false}};
+  window.erpIsMainAdmin=mainAdmin;
+  window.erpCanWrite=()=>window.currentRole==='admin'&&mainAdmin();
+  const deny=()=>{try{toast('🔒 इस Admin user को केवल View/Details access है। बदलाव केवल Main Admin कर सकता है।')}catch(e){}};
+  // Every existing mutation entry point now requires Main Admin.
+  const originalRequire=window.requireAdmin;
+  window.requireAdmin=function(){if(!window.erpCanWrite()){deny();return false}return typeof originalRequire==='function'?originalRequire():true};
+  const oldApply=window.applyAccessUI;
+  window.applyAccessUI=function(){try{oldApply?.()}catch(e){} if(window.currentRole!=='admin')return; const main=mainAdmin();
+    document.querySelectorAll('.admin-only').forEach(el=>el.style.display=main?'':'none');
+    if(!main){
+      document.querySelectorAll('#studentTable .btn-warning,#studentTable .btn-danger,[onclick*="chooseStudentPhoto"]').forEach(el=>el.remove());
+      // Secondary Admins are strictly read-only: hide save/add/edit/delete/import/upload/send controls.
+      document.querySelectorAll('.page button,.page input,.page select,.page textarea').forEach(el=>{
+        const oc=(el.getAttribute('onclick')||'').toLowerCase();
+        const id=(el.id||'').toLowerCase();
+        const bad=/(add|save|delete|edit|update|upload|import|create|recordpayment|open.*modal|sendmessage|send|toggle|change|remove|approve|reject)/.test(oc+' '+id);
+        if(bad){el.style.display='none';el.disabled=true;el.readOnly=true}
+      });
+      document.querySelectorAll('#messages #messageText,#messages #messageFile').forEach(el=>{el.style.display='none';el.disabled=true});
+    }
+  };
+  const oldShow=window.showPage;
+  window.showPage=function(page,el){if(window.currentRole==='admin'&&!mainAdmin()&&typeof window.erpHasAccess==='function'&&!window.erpHasAccess(page)){deny();return;}return oldShow?.apply(this,arguments)};
+  const oldRender=window.renderStudents;
+  window.renderStudents=function(){try{oldRender?.apply(this,arguments)}catch(e){} if(window.currentRole==='admin'&&!mainAdmin())document.querySelectorAll('#studentTable .btn-warning,#studentTable .btn-danger,[onclick*="chooseStudentPhoto"]').forEach(el=>el.remove());};
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(window.applyAccessUI,150));
+})();
+</script>
+
+
+
+<style id="erp-final-ui-fix">#settings .table-box{overflow-x:auto}#settings #studentLoginTable{min-width:760px}#uploadMarks .filters{display:grid!important;grid-template-columns:repeat(5,minmax(150px,1fr))!important;gap:12px!important;align-items:end!important}#uploadMarks .filters>div{min-width:0!important}.student-list-box{overflow:visible!important;overflow-x:visible!important;overflow-y:visible!important;max-width:100%!important}.student-list-table{min-width:100%!important;width:100%!important;table-layout:auto!important}.student-list-table th,.student-list-table td{white-space:normal!important;padding:7px 8px!important;vertical-align:middle!important}.student-list-table th:nth-child(1),.student-list-table td:nth-child(1){width:48px!important;text-align:center}.student-list-table th:nth-child(2),.student-list-table td:nth-child(2){width:95px!important}.student-list-table th:nth-child(3),.student-list-table td:nth-child(3){min-width:130px!important}.student-list-table th:nth-child(4),.student-list-table td:nth-child(4){min-width:80px!important}.student-list-table th:nth-child(5),.student-list-table td:nth-child(5){min-width:70px!important}.student-list-table th:nth-child(6),.student-list-table td:nth-child(6){min-width:130px!important}.student-list-table th:nth-child(7),.student-list-table td:nth-child(7){min-width:160px!important}.student-list-table th:nth-child(8),.student-list-table td:nth-child(8){min-width:105px!important}.student-list-table th:nth-child(9),.student-list-table td:nth-child(9){min-width:105px!important}.student-list-table th:nth-child(10),.student-list-table td:nth-child(10){min-width:95px!important}.student-list-table th:nth-child(11),.student-list-table td:nth-child(11){min-width:75px!important}.student-list-table th:nth-child(12),.student-list-table td:nth-child(12){min-width:125px!important}@media(max-width:1100px){#uploadMarks .filters{grid-template-columns:repeat(2,minmax(180px,1fr))!important}}</style><script id="erp-final-js-fix">(function(){
+function studentsSafe(){try{return typeof getStudents==='function'?(getStudents()||[]):JSON.parse(localStorage.getItem('PG_STUDENTS')||'[]')}catch(e){return[]}}
+function esc(v){try{return typeof escapeHtml==='function'?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])})}catch(e){return String(v||'')}}
+window.fixStudentLoginTable=function(){var box=document.getElementById('studentLoginTable');if(!box)return;var a=studentsSafe();box.innerHTML=a.map(function(s,i){return '<tr><td><input class="input" id="loginId_'+i+'" value="'+esc(s.id||'')+'" style="min-width:140px"></td><td>'+esc(s.name||'')+'</td><td><b>'+esc(s.id||'')+'</b></td><td><input class="input" id="loginPw_'+i+'" type="text" value="'+esc(s.password||'1234')+'" style="min-width:130px"></td><td><button class="btn btn-success btn-sm" onclick="saveStudentLogin('+i+')">💾 Save</button></td></tr>'}).join('')||'<tr><td colspan="5" class="empty">No students found.</td></tr>'};
+window.fixDashboardCount=function(){var e=document.getElementById('dStudents');if(!e)return;var a=studentsSafe();try{if(typeof getVisibleStudents==='function')a=getVisibleStudents()||a}catch(x){}e.textContent=a.length};
+window.fixUploadMarksLayout=function(){var e=document.querySelector('#uploadMarks .filters');if(e){e.style.display='grid';e.style.gridTemplateColumns='repeat(5,minmax(150px,1fr))';e.style.gap='12px';e.style.alignItems='end'}};
+var oldShow=window.showPage;window.showPage=function(p,el){var r=oldShow?oldShow.apply(this,arguments):undefined;setTimeout(function(){if(p==='settings')window.fixStudentLoginTable();if(p==='dashboard')window.fixDashboardCount();if(p==='uploadMarks')window.fixUploadMarksLayout()},50);return r};
+var oldRefresh=window.refreshAll;window.refreshAll=function(){var r=oldRefresh?oldRefresh.apply(this,arguments):undefined;setTimeout(function(){window.fixDashboardCount();window.fixStudentLoginTable();window.fixUploadMarksLayout()},80);return r};
+window.addEventListener('load',function(){setTimeout(function(){window.fixDashboardCount();window.fixStudentLoginTable();window.fixUploadMarksLayout()},300)});
+})();</script><script>
+/* FINAL WRITE GUARD: Main Admin only. Secondary Admins and Students are read-only. */
+(function(){
+  const canWrite=()=>window.currentRole==='admin'&&window.erpIsMainAdmin?.()===true;
+  const deny=()=>{try{window.toast?.('🔒 केवल Main Admin बदलाव कर सकता है।')}catch(e){}};
+  const wrap=(name)=>{const fn=window[name];if(typeof fn!=='function'||fn.__mainAdminGuard)return;const w=async function(){if(!canWrite()){deny();return false}return fn.apply(this,arguments)};w.__mainAdminGuard=true;window[name]=w};
+  ['saveAttendance','saveMarksForm','saveMarks','saveMarksheetMarks','saveFee','deleteFee','deleteStudent','importBulkStudents','saveSettings','saveAdminCredentials','saveStudentLogin','createAdminUser','deleteAdminUser'].forEach(wrap);
+  const oldSend=window.sendMessage;
+  if(typeof oldSend==='function'&&!oldSend.__secondaryAdminGuard){
+    const w=async function(){if(window.currentRole==='admin'&&!canWrite()){deny();return false}return oldSend.apply(this,arguments)};w.__secondaryAdminGuard=true;window.sendMessage=w;
+  }
+})();
+</script>
+<style id="erp-message-student-final-fix">
+/* Student list: keep House, Status and Actions/Options rows/cells white like Student Name. */
+#students #studentTable td:nth-child(10),
+#students #studentTable td:nth-child(11),
+#students #studentTable td:nth-child(12),
+#students #studentTable td:nth-child(3){background:#fff!important;}
+</style>
+<script>
+/* Final message behavior: immediate notification after login/open and live chat refresh. */
+(function(){
+  const refreshMessageView=async()=>{
+    try{
+      if(typeof window.renderMessages==='function') await window.renderMessages();
+    }catch(e){console.warn('Message view refresh:',e)}
+  };
+  const oldPage=window.showPage;
+  window.showPage=function(id,el){
+    const result=oldPage?.apply(this,arguments);
+    if(id==='messages'){
+      setTimeout(async()=>{
+        await refreshMessageView();
+        try{await window.markMessageNotificationsRead?.()}catch(e){console.warn(e)}
+        await refreshMessageView();
+      },80);
+    }
+    return result;
+  };
+  /* When a realtime snapshot arrives, refresh the open Messages page immediately. */
+  window.__pgRefreshMessagesView=refreshMessageView;
+  /* After login, check immediately rather than waiting for the interval. */
+  const oldStudentLogin=window.doLogin;
+  if(oldStudentLogin&&!window.__pgLoginWrapped){
+    window.__pgLoginWrapped=true;
+    window.doLogin=async function(){
+      const result=await oldStudentLogin.apply(this,arguments);
+      setTimeout(()=>{try{window.checkMessages?.()}catch(e){}},120);
+      return result;
+    };
+  }
+})();
+</script></body></html>
