@@ -78,7 +78,7 @@ body{background:#f4f6f9;color:#30343b}.topbar{height:65px;background:#b71c1c;col
 </aside>
 <main class="main">
 <section id="dashboard" class="page active"><div class="page-header"><div><h1>Dashboard</h1><p>Welcome to Patanjali Gurukulam ERP</p></div><div id="currentDate" class="small"></div></div><div class="cards"><div class="card"><span class="card-icon">👨‍🎓</span><div class="card-title">Total Students</div><div class="card-number" id="dStudents">0</div></div><div class="card"><span class="card-icon">✅</span><div class="card-title">Present Today</div><div class="card-number" id="dPresent">0</div></div><div class="card"><span class="card-icon">💰</span><div class="card-title">Fees Collected</div><div class="card-number" id="dFees">₹0</div></div><div class="card"><span class="card-icon">📊</span><div class="card-title">Average Result</div><div class="card-number" id="dResult">0%</div></div></div><div class="grid-2"><div class="panel"><div class="panel-title">Quick Actions</div><div class="quick-grid"><div class="quick" onclick="showPageById('students')">👨‍🎓 Add / Manage Students</div><div class="quick" onclick="showPageById('attendance')">📅 Take Attendance</div><div class="quick" onclick="showPageById('marks')">📝 Enter Marks</div><div class="quick" onclick="showPageById('fees')">💰 Fee Collection</div></div></div><div class="panel"><div class="panel-title">System Overview</div><p class="small">This is a frontend-only ERP. Data is stored in this browser using localStorage. No PHP, Node.js, MySQL or API is required.</p><br><div id="dashboardNotice" class="notice"></div></div></div></section>
-<section id="students" class="page"><div class="page-header"><div><h1>Student Management</h1><p>Add, search, edit, view and delete students.</p></div><button class="btn btn-primary admin-only" onclick="openStudentModal()">＋ Add Student</button></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('students')">⬇ Download Excel</button><button class="btn btn-danger" onclick="downloadPDF('students')">⬇ Download PDF</button><button class="btn btn-warning admin-only" onclick="deleteSelectedStudents()">🗑 Delete Selected</button><button class="btn btn-danger admin-only" onclick="deleteAllStudents()">Delete All Students</button><button class="btn btn-secondary admin-only" onclick="deleteDuplicateStudents()">Delete Duplicates</button></div>
+<section id="students" class="page"><div class="page-header"><div><h1>Student Management</h1><p>Add, search, edit, view and delete students.</p></div><button class="btn btn-primary admin-only" onclick="openStudentModal()">＋ Add Student</button></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('students')">⬇ Download Excel</button><button class="btn btn-danger" onclick="downloadPDF('students')">⬇ Download PDF</button><button class="btn btn-warning admin-only" onclick="deleteSelectedStudents()">🗑 Delete Selected</button><button class="btn btn-danger admin-only" onclick="clearAllStudentData()">Delete All Students</button><button class="btn btn-secondary admin-only" onclick="deleteDuplicateStudents()">Delete Duplicates</button></div>
 
 <div class="student-filter-bar"><div class="student-filter-title">Search Student</div><div class="student-filter-controls"><input id="studentSearch" class="input" placeholder="Search by name / ID..." oninput="renderStudents()"><select id="studentClassFilter" class="select" onchange="renderStudents()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select><select id="studentSectionFilter" class="select" onchange="renderStudents()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div></div>
 
@@ -133,7 +133,7 @@ function logout(){localStorage.removeItem('PG_LOGIN_ROLE');localStorage.removeIt
 
 var students=load(KEY.students,[]), attendance=load(KEY.attendance,{}), marks=load(KEY.marks,[]), fees=load(KEY.fees,[]), settings=load(KEY.settings,null);
 window.students=students;window.attendance=attendance;window.marks=marks;window.fees=fees;window.settings=settings;
-if(!students.length){students=[{id:'PG2026001',name:'Aarav Sharma',father:'Rajesh Sharma',mother:'Sunita Sharma',className:'VIII',section:'A',mobile:'9876543210',address:'Haridwar'},{id:'PG2026002',name:'Ananya Verma',father:'Amit Verma',mother:'Pooja Verma',className:'IX',section:'B',mobile:'9876543211',address:'Rishikesh'},{id:'PG2026003',name:'Rohan Singh',father:'Vijay Singh',mother:'Kavita Singh',className:'VII',section:'A',mobile:'9876543212',address:'Dehradun'}];save(KEY.students,students)}
+/* Do not seed demo students when the real student list is empty. */
 students.forEach(s=>{s.className=classRoman(s.className);delete s.rollNo;if(!s.password)s.password='1234';});save(KEY.students,students);auth=load('PG_AUTH',auth);save('PG_AUTH',auth);
 if(currentRole){document.getElementById('loginScreen').style.display='none'}else{selectLoginRole('admin')}
 
@@ -235,7 +235,8 @@ import {
   setDoc,
   doc,
   deleteDoc,
-  writeBatch
+  writeBatch,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -273,10 +274,20 @@ function saveLocal(key, value){
 /* =========================================================
    STUDENTS
 ========================================================= */
+async function setStudentCollectionCleared(cleared){
+  try{
+    await setDoc(doc(db,"erp_meta","student_collection"),{cleared:!!cleared,updatedAt:new Date().toISOString()},{merge:true});
+    return true;
+  }catch(error){console.error("Student collection state save error:",error);return false;}
+}
+async function getStudentCollectionCleared(){
+  try{const snap=await getDoc(doc(db,"erp_meta","student_collection"));return snap.exists()&&snap.data()?.cleared===true;}catch(error){console.error("Student collection state read error:",error);return false;}
+}
 async function saveStudentToFirebase(student){
   if(!student || !student.id) return false;
   try{
     await setDoc(doc(db, "students", String(student.id)), student, {merge:true});
+    await setStudentCollectionCleared(false);
     return true;
   }catch(error){
     console.error("Student Firebase save error:", error);
@@ -301,6 +312,7 @@ async function saveAllStudentsToFirebase(list){
       console.error("Student batch upload error:", error);
     }
   }
+  if(success>0) await setStudentCollectionCleared(false);
   console.log(`☁️ ${success} students synced to Firebase`);
   return success;
 }
@@ -331,17 +343,20 @@ window.firebaseStudentAPI = {
   saveAllStudents: saveAllStudentsToFirebase,
   saveAllStudentsToFirebase,
   loadStudents: loadStudentsFromFirebase,
-  deleteStudent: deleteStudentFromFirebase
+  deleteStudent: deleteStudentFromFirebase,
+  setCollectionCleared: setStudentCollectionCleared,
+  isCollectionCleared: getStudentCollectionCleared
 };
 
 async function initializeOnlineStudents(){
   try{
     const localList = currentStudents();
     const onlineList = (await loadStudentsFromFirebase()) || [];
+    const cloudCleared = await getStudentCollectionCleared();
     const map = new Map();
 
-    /* Local records are kept first so an offline/new import is not lost. */
-    localList.forEach(s => { if(s && s.id) map.set(String(s.id), s); });
+    /* A cloud clear marker prevents stale local browser data from resurrecting deleted records. */
+    if(!(cloudCleared && onlineList.length===0)) localList.forEach(s => { if(s && s.id) map.set(String(s.id), s); });
     /* Firebase is the online master when the same ID exists. */
     onlineList.forEach(s => { if(s && s.id) map.set(String(s.id), {...(map.get(String(s.id))||{}), ...s}); });
 
@@ -351,7 +366,7 @@ async function initializeOnlineStudents(){
 
     /* Upload only local records that were not already present online. */
     const onlineIds = new Set(onlineList.map(s=>String(s.id)));
-    const localOnly = localList.filter(s=>s && s.id && !onlineIds.has(String(s.id)));
+    const localOnly = (cloudCleared && onlineList.length===0) ? [] : localList.filter(s=>s && s.id && !onlineIds.has(String(s.id)));
     if(localOnly.length) await saveAllStudentsToFirebase(localOnly);
 
     try { refreshAll(); } catch(e) {}
@@ -2189,21 +2204,40 @@ const _renderMsg0=window.renderMessages;window.renderMessages=async function(){i
   window.renderStudents=function(){
     if(typeof originalRender==='function') return originalRender.apply(this,arguments);
   };
+  window.deleteAllStudents = function(){ return window.clearAllStudentData(); };
   window.clearAllStudentData=async function(){
     if(typeof window.requireAdmin==='function'&&!window.requireAdmin())return;
-    const arr=window.getVisibleStudents?.()||window.students||[];
-    if(!arr.length){alert('No student records found.');return;}
-    if(!confirm('WARNING: This will delete ALL student records from Firebase and this browser. Fees, attendance, marks and messages are not intentionally deleted. Continue?'))return;
-    if(!confirm('Final confirmation: permanently delete '+arr.length+' student record(s)? Export a backup first.'))return;
-    const btn=[...document.querySelectorAll('button')].find(b=>b.getAttribute('onclick')==='clearAllStudentData()'); if(btn){btn.disabled=true;btn.textContent='Deleting…'}
+    const localArr=Array.isArray(window.students)?window.students:[];
+    let remoteArr=[];
+    try{remoteArr=await window.firebaseStudentAPI?.loadStudents?.()||[]}catch(e){alert('Firebase से student list नहीं पढ़ पाए। कोई data delete नहीं किया गया।');return;}
+    const byId=new Map();
+    [...localArr,...remoteArr].forEach(st=>{if(st&&st.id)byId.set(String(st.id),st)});
+    const arr=[...byId.values()];
+    if(!arr.length){
+      const marked=await window.firebaseStudentAPI?.setCollectionCleared?.(true);
+      localStorage.setItem('PG_STUDENTS','[]');window.students=[];try{students=[]}catch(e){}
+      alert(marked?'Student list पहले से खाली थी; cloud clear marker सेव कर दिया गया।':'Student list खाली है, लेकिन cloud clear marker सेव नहीं हुआ। Firebase Rules जाँचें.');
+      return;
+    }
+    if(!confirm('WARNING: Firebase और इस browser से सभी '+arr.length+' student records हटेंगे। यह वापस नहीं किया जा सकेगा। पहले backup लें। जारी रखें?'))return;
+    const btn=[...document.querySelectorAll('button')].find(b=>b.getAttribute('onclick')==='clearAllStudentData()');if(btn){btn.disabled=true;btn.textContent='Deleting…'}
     let cloudOK=0,cloudFail=0;
-    for(const st of arr){try{const ok=await window.firebaseStudentAPI?.deleteStudent?.(st.id);if(ok)cloudOK++;else cloudFail++}catch(e){cloudFail++}}
-    localStorage.setItem('PG_STUDENTS','[]'); window.students=[];
-    try{if(typeof students!=='undefined')students=[]}catch(e){}
-    try{window.renderStudents?.();window.refreshAll?.()}catch(e){}
-    if(btn){btn.disabled=false;btn.textContent='Clear All Student Data'}
-    alert('Local student list cleared. Firebase deletions succeeded: '+cloudOK+'; failed/not connected: '+cloudFail+'. Please verify Firebase Console before assuming cloud records are all removed.');
+    for(const st of arr){try{const ok=await window.firebaseStudentAPI?.deleteStudent?.(st.id);if(ok)cloudOK++;else cloudFail++;}catch(e){cloudFail++;}}
+    let remaining=[];
+    try{remaining=await window.firebaseStudentAPI?.loadStudents?.()||[]}catch(e){cloudFail++;}
+    if(cloudFail===0 && remaining.length===0){
+      const markerOK=await window.firebaseStudentAPI?.setCollectionCleared?.(true);
+      if(markerOK){localStorage.setItem('PG_STUDENTS','[]');window.students=[];try{students=[]}catch(e){};try{renderStudents();refreshAll()}catch(e){};
+        alert('सफलता: '+cloudOK+' student records Firebase से हटाए गए। Cloud clear marker सेव है, इसलिए stale local list वापस upload नहीं होनी चाहिए।');
+      }else{
+        alert('Firebase से records हट गए, लेकिन clear marker सेव नहीं हुआ। Firebase Rules में erp_meta write permission जाँचें; दूसरे device की पुरानी local list फिर upload हो सकती है।');
+      }
+    }else{
+      alert('Deletion पूरी नहीं हुई। सफल: '+cloudOK+', असफल/बाकी: '+Math.max(cloudFail,remaining.length)+'. Local list जानबूझकर clear नहीं की गई ताकि बाकी records का पता रहे। Firebase Console और Firestore Rules जाँचें।');
+    }
+    if(btn){btn.disabled=false;btn.textContent='Delete All Students'}
   };
+
   // Read status is stored in Firebase; a read message is never re-alerted from the local cache.
   const oldMark=window.markMessageNotificationsRead;
   if(typeof oldMark==='function')window.markMessageNotificationsRead=async function(){await oldMark.apply(this,arguments);try{const list=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]');const r=String(window.currentRole||'');const id=r==='student'?String(window.currentStudentId||''):String(localStorage.getItem('PG_ADMIN_ID')||'admin');const seen=list.filter(m=>m&&m.read===true&&((r==='student'&&String(m.receiverId)===id)||(r==='admin'&&String(m.receiverRole)==='admin'&&String(m.receiverId||'admin')===id))).map(m=>String(m.id));const old=JSON.parse(localStorage.getItem('PG_MSG_ALERT_IDS')||'[]');localStorage.setItem('PG_MSG_ALERT_IDS',JSON.stringify([...new Set([...old,...seen])].slice(-500)));}catch(e){}};
