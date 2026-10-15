@@ -54,6 +54,20 @@ body{background:#f4f6f9;color:#30343b}.topbar{height:65px;background:#b71c1c;col
 .student-list-table tbody td:nth-child(8),
 .student-list-table tbody td:nth-child(9){background:#fff!important;}
 </style>
+
+<style>
+.subject-box-um{margin-top:15px;padding:15px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa}
+.subject-picker-um{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.subject-picker-um label{display:flex;align-items:center;gap:6px;padding:7px 10px;background:#fff;border:1px solid #ddd;border-radius:6px;font-size:13px}
+.subject-picker-um input{width:auto}
+.subject-toolbar-um{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+#umTableBox table{min-width:1100px}
+#umTableBox th,#umTableBox td{text-align:center;vertical-align:middle}
+#umTableBox th:first-child,#umTableBox td:first-child,#umTableBox th:nth-child(2),#umTableBox td:nth-child(2){text-align:left}
+.um-mark-input{width:72px!important;text-align:center}
+.um-mark-input:disabled{background:#f1f3f5;color:#999}
+.um-pct-good{font-weight:700;color:#198754}.um-pct-pending{font-weight:700;color:#b7791f}
+</style>
 </head>
 <body>
 <div id="loginScreen" class="login-screen"><div class="login-card"><div class="login-logo">PG</div><h1>Patanjali Gurukulam</h1><div class="login-sub">ERP Login Panel</div><div class="role-tabs"><div id="adminTab" class="role-tab active" onclick="selectLoginRole('admin')">👨‍💼 Admin</div><div id="studentTab" class="role-tab" onclick="selectLoginRole('student')">👨‍🎓 Student</div></div><div class="form-group"><label id="loginIdLabel">Admin ID</label><input id="loginId" class="input" placeholder="Enter Admin ID" autocomplete="username"></div><div class="form-group" style="margin-top:12px"><label>Password</label><input id="loginPassword" type="password" class="input" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div><button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="doLogin()">🔐 Login</button><div id="loginError" class="login-error"></div><div class="login-help" id="loginHelp">Admin login: <b>admin</b> / <b>1234</b></div></div></div>
@@ -66,7 +80,6 @@ body{background:#f4f6f9;color:#30343b}.topbar{height:65px;background:#b71c1c;col
 <div class="nav-item" onclick="showPage('bulkStudents',this)"><span class="nav-icon">📥</span>Bulk Student Upload</div>
 <div class="nav-item" onclick="showPage('attendance',this)"><span class="nav-icon">📅</span>Attendance</div>
 <div class="bulk-submenu attendance-submenu"><div class="nav-item bulk-subitem" onclick="setAttendanceType('yog',this)">🧘 Yog Attendance</div><div class="nav-item bulk-subitem" onclick="setAttendanceType('yajya',this)">🔥 Yajya Attendance</div><div class="nav-item bulk-subitem" onclick="setAttendanceType('sandhya',this)">🙏 Sandhya Attendance</div><div class="nav-item bulk-subitem" onclick="setAttendanceType('class',this)">📚 Class Attendance</div></div>
-<div class="nav-item" onclick="showPage('marks',this)"><span class="nav-icon">📝</span>Marks</div>
 <div class="nav-item admin-only" onclick="showPage('uploadMarks',this)"><span class="nav-icon">📤</span>Upload Marks</div>
 <div class="nav-item" onclick="showPage('results',this)"><span class="nav-icon">🏆</span>Results</div>
 <div class="nav-item" onclick="showPage('fees',this)"><span class="nav-icon">💰</span>Fees</div>
@@ -107,7 +120,33 @@ function handleSchoolExcelImport(input) {
  <button class="btn btn-success admin-only" onclick="saveAttendance()">💾 Save Attendance</button></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('attendance')">⬇ Download Excel</button><button class="btn btn-danger" onclick="downloadPDF('attendance')">⬇ Download PDF</button></div><div class="panel"><div class="filters"><div><label class="small">Date</label><input id="attDate" type="date" class="input" onchange="renderAttendance()"></div><div><label class="small">Class</label><select id="attClass" class="select" onchange="renderAttendance()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="attSection" class="select" onchange="renderAttendance()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="attSearch" class="input" placeholder="Student name / ID" oninput="renderAttendance()"></div></div><div class="summary"><div class="mini stat-blue">Total<strong id="attTotal">0</strong></div><div class="mini stat-green">Present<strong id="attPresent">0</strong></div><div class="mini stat-red">Absent<strong id="attAbsent">0</strong></div><div class="mini stat-yellow">Leave<strong id="attLeave">0</strong></div></div><div class="actions" style="margin-bottom:15px"><button class="btn btn-success btn-sm" onclick="markAllAttendance('Present')">Mark All Present</button><button class="btn btn-danger btn-sm" onclick="markAllAttendance('Absent')">Mark All Absent</button><button class="btn btn-warning btn-sm" onclick="markAllAttendance('Leave')">Mark All Leave</button><button class="btn btn-secondary btn-sm" onclick="clearAttendance()">Clear</button></div><div class="table-box"><table><thead><tr><th>Sr.</th><th>ID</th><th>Student</th><th>Class</th><th>Section</th><th>Status</th></tr></thead><tbody id="attendanceTable"></tbody></table></div></div></section>
 <section id="marks" class="page"><div class="page-header"><div><h1>Marks</h1><p>17-subject marks entry, class-wise filtering and online records.</p></div><div class="actions"><button class="btn btn-primary admin-only" onclick="openMarksModal()">＋ Enter / Edit Marks</button><button class="btn btn-success admin-only" onclick="saveMarks()">💾 Save</button></div></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('marks')">⬇ Excel</button><button class="btn btn-danger" onclick="downloadPDF('marks')">⬇ PDF</button></div><div class="panel"><div class="filters"><div><label class="small">Exam</label><select id="markExam" class="select" onchange="renderMarks()"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div><label class="small">Class</label><select id="markClass" class="select" onchange="renderMarks()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Section</label><select id="markSection" class="select" onchange="renderMarks()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Search</label><input id="markSearch" class="input" placeholder="Student name / ID" oninput="renderMarks()"></div></div><div class="table-box wide-table"><table><thead><tr><th>Student</th><th>Class</th><th>Math</th><th>English</th><th>Science</th><th>Social Science</th><th>Hindi</th><th>Sanskrit</th><th>Sahitya</th><th>Vyakaran</th><th>Shastra</th><th>Web App</th><th>Pol. Science</th><th>History</th><th>Economics</th><th>Yoga</th><th>PE</th><th>Music</th><th>IT</th><th>Total</th><th>%</th><th>Grade</th><th>Action</th></tr></thead><tbody id="marksTable"></tbody></table></div></div></section>
 
-<section id="uploadMarks" class="page"><div class="page-header"><div><h1>📋 A4 Marksheet Builder</h1><p>Class, Subject और Exam चुनें → Students Import करें → Marks भरें → A4 Marksheet PDF बनाएं।</p></div></div><div class="panel"><div class="filters"><div><label class="small">Select Class</label><select id="uploadMarkClass" class="select" onchange="selectSubjectsForClass(); if(typeof renderMarksheetPreview==='function') renderMarksheetPreview();"><option value="">Select Class</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div><div><label class="small">Select Section</label><select id="uploadMarkSection" class="select" onchange="if(typeof renderMarksheetPreview==='function') renderMarksheetPreview()"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div><div><label class="small">Select Subjects</label><div id="uploadSubjectPicker" class="subject-picker"></div><div class="subject-toolbar"><button type="button" class="btn btn-secondary btn-sm" onclick="selectSubjectsForClass()">☑ Recommended</button><button type="button" class="btn btn-warning btn-sm" onclick="clearSubjectSelection()">☐ Clear</button><span id="selectedSubjectCount" class="small">0 selected</span></div></div><div><label class="small">Select Exam</label><select id="uploadMarkExam" class="select"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div><label class="small">Maximum Marks</label><input id="uploadMarkMax" class="input" type="number" min="1" max="1000" value="100"></div></div><div class="actions" style="margin:15px 0"><button class="btn btn-primary" onclick="importMarksheetStudents()">👨‍🎓 Import Students</button><button class="btn btn-success admin-only" onclick="saveMarksheetMarks()">💾 Save Marks Online</button><button class="btn btn-info" onclick="downloadMarksheetExcel()">⬇ Excel</button><button class="btn btn-danger" onclick="downloadMarksheetPDF()">⬇ A4 PDF Marksheet</button><button class="btn btn-secondary" onclick="downloadMarksTemplate()">📄 Excel Template</button></div><div class="notice"><b>Workflow:</b> पहले Class + Subject + Exam चुनें, फिर <b>Import Students</b> दबाएं। नीचे पूरी class की list आएगी। Obtain Marks भरें और Save करें। PDF में हर student की <b>front side</b> पर नाम/ID/Father/Class/Section + school logo और <b>back side</b> पर selected subject के marks होंगे।</div><div class="panel" style="margin-top:15px;border:1px solid #e5e7eb"><div class="form-grid" style="grid-template-columns:1fr 1fr"><div class="form-group"><label>School Logo (optional)</label><input id="marksheetLogoFile" class="input" type="file" accept="image/png,image/jpeg,image/webp" onchange="previewMarksheetLogo(event)"></div><div class="form-group"><label>Marksheet Title</label><input id="marksheetTitle" class="input" value="STUDENT MARKSHEET"></div></div><div id="marksheetLogoPreview" class="small" style="margin-top:8px">Default PG logo will be used if no image is selected.</div></div><div id="marksUploadStatus" class="notice" style="margin-top:15px">Class, subject और exam चुनकर Import Students दबाएं।</div><div id="marksheetTableBox" class="table-box" style="margin-top:15px"><div class="empty">Students will appear here after Import Students.</div></div></div></section>
+<section id="uploadMarks" class="page">
+<div class="page-header">
+  <div><h1>📤 Upload Marks</h1><p>Class और subjects चुनें, सभी students एक साथ लाएँ और marks Firebase में save करें।</p></div>
+</div>
+<div class="panel">
+  <div class="filters" style="align-items:end">
+    <div><label class="small">Class</label><select id="umClass" class="select" onchange="umRenderSubjects()"><option value="">Select Class</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div>
+    <div><label class="small">Section</label><select id="umSection" class="select"><option value="">All Sections</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option></select></div>
+    <div><label class="small">Exam</label><select id="umExam" class="select"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div>
+    <div><label class="small">Maximum / Subject</label><input id="umMaxPerSubject" class="input" type="number" min="1" value="100"></div>
+  </div>
+  <div class="subject-box-um">
+    <div class="panel-title">📚 Subjects</div>
+    <div class="small" id="umSubjectHelp">पहले class select करें।</div>
+    <div id="umSubjects" class="subject-picker-um"></div>
+    <div class="subject-toolbar-um"><button class="btn btn-secondary btn-sm" onclick="umSelectAll()">☑ Select All</button><button class="btn btn-warning btn-sm" onclick="umClearSubjects()">☐ Clear</button><span id="umSubjectCount" class="small">0 selected</span></div>
+  </div>
+  <div class="actions" style="margin:15px 0">
+    <button class="btn btn-primary" onclick="umLoadStudents()">👨‍🎓 Import Students</button>
+    <button class="btn btn-success admin-only" onclick="umSaveMarks()">💾 Save Marks Online</button>
+    <button class="btn btn-info" onclick="umExportExcel()">⬇ Export CSV</button>
+    <button class="btn btn-secondary" onclick="umClearTable()">Clear</button>
+  </div>
+  <div id="umStatus" class="notice">Class + subjects चुनें और Import Students दबाएँ।</div>
+  <div id="umTableBox" class="table-box"><div class="empty">Students will appear here.</div></div>
+</div>
+</section>
 <section id="results" class="page"><div class="page-header"><div><h1>Results</h1><p>Student-wise result summary and percentage.</p></div></div><div class="download-bar"><button class="btn btn-info" onclick="downloadExcel('results')">⬇ Download Excel</button><button class="btn btn-danger" onclick="downloadPDF('results')">⬇ Download PDF</button></div><div class="panel"><div class="filters"><div><label class="small">Exam</label><select id="resultExam" class="select" onchange="renderResultPage()"><option>Unit Test 1</option><option>Half Yearly</option><option>Unit Test 2</option><option>Annual Exam</option></select></div><div><label class="small">Class</label><select id="resultClass" class="select" onchange="renderResultPage()"><option value="">All Classes</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option><option>XII</option></select></div></div><div class="result-summary"><div class="card"><div class="card-title">Students</div><div class="card-number" id="resultCount">0</div></div><div class="card"><div class="card-title">Average</div><div class="card-number" id="resultAverage">0%</div></div><div class="card"><div class="card-title">Passed</div><div class="card-number" id="resultPassed">0</div></div><div class="card"><div class="card-title">Failed</div><div class="card-number" id="resultFailed">0</div></div></div><div class="table-box wide-table"><table><thead><tr><th>Sr.</th><th>Student ID</th><th>Name</th><th>Class</th><th>Section</th><th>Total</th><th>Max</th><th>%</th><th>Grade</th></tr></thead><tbody id="resultTable"></tbody></table></div></div></section>
 
 <section id="messages" class="page"><div class="panel" id="latestMessagesPanel" style="margin-bottom:15px"><div class="panel-title">🔔 Latest 5 Messages</div><div id="latestMessages">No messages yet.</div></div><div class="page-header"><div><h1>💬 Online Chat</h1><p>Student ↔ Student और Student ↔ Admin messaging with attachments.</p></div></div><div class="chat-layout"><div class="panel chat-users" id="messageUsers"></div><div class="chat-window"><div class="chat-head" id="messageChatHead">Select a user</div><div class="chat-messages" id="messageList"></div><div class="chat-compose" style="align-items:flex-end"><textarea id="messageText" class="textarea" placeholder="Type your message..."></textarea><div style="display:flex;flex-direction:column;gap:6px;min-width:210px"><input id="messageFile" type="file" class="input" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"><div class="small">Photo/File: max 25 MB • Video: max 50 MB</div><button class="btn btn-primary" onclick="sendMessage()">Send ➤</button></div></div></div></div></section>
@@ -2107,31 +2146,81 @@ renderStudents=function(){const table=document.getElementById('studentTable');if
 function removeStudentsByIds(ids){const set=new Set(ids.map(String));students=students.filter(s=>!set.has(String(s.id)));marks=marks.filter(m=>!set.has(String(m.studentId)));fees=fees.filter(f=>!set.has(String(f.studentId)));Object.keys(attendance).forEach(d=>{if(attendance[d]&&typeof attendance[d]==='object')set.forEach(id=>delete attendance[d][id])});save(KEY.students,students);save(KEY.marks,marks);save(KEY.fees,fees);save(KEY.attendance,attendance);renderStudents();refreshAll();toast('Student records deleted')}
 function deleteSelectedStudents(){if(!requireAdmin())return;const ids=[...document.querySelectorAll('.student-select-box:checked')].map(x=>x.value);if(!ids.length)return toast('Select students first');if(confirm('Delete '+ids.length+' selected students and related records?'))removeStudentsByIds(ids)}
 function deleteAllStudents(){if(!requireAdmin())return;if(confirm('Delete ALL students and related marks, fees and attendance? This cannot be undone.'))removeStudentsByIds(students.map(s=>String(s.id)))}
-function deleteDuplicateStudents(){
+async function deleteDuplicateStudents(){
  if(!requireAdmin())return;
- // Duplicate means same student name (case/spacing-insensitive), not duplicate ID.
- const seen=new Set(), remove=[];
- (students||[]).forEach((s,index)=>{
-   const key=String(s.name||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase();
-   if(!key)return;
-   if(seen.has(key))remove.push({s,index}); else seen.add(key);
+ const localList=Array.isArray(students)?students:[];
+ let remoteList=[];
+ try{
+   remoteList=await window.firebaseStudentAPI?.loadStudents?.()||[];
+ }catch(e){return toast('Firebase student list load नहीं हो सकी। Delete नहीं किया गया।');}
+ if(localList.length+remoteList.length<2)return toast('No duplicate student records found');
+
+ // Build a strong identity key. Prefer admission/roll/id; otherwise use
+ // name + father + class + section + DOB. This avoids deleting two students
+ // who only happen to have the same name.
+ const norm=v=>String(v??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+ const identity=s=>{
+   const id=norm(s?.id||s?.studentId||s?.admissionNo);
+   if(id)return 'id:'+id;
+   const admission=norm(s?.admissionNo||s?.admissionNumber||s?.admission);
+   if(admission)return 'adm:'+admission;
+   const roll=norm(s?.rollNo||s?.rollNumber);
+   const name=norm(s?.name||s?.studentName||s?.fullName);
+   const father=norm(s?.father||s?.fatherName||s?.guardian);
+   const cls=norm(s?.className||s?.class||s?.standard);
+   const sec=norm(s?.section);
+   const dob=norm(s?.dob||s?.dateOfBirth);
+   if(name&&cls&&sec&&father)return 'person:'+name+'|'+father+'|'+cls+'|'+sec+'|'+dob;
+   if(name&&cls&&sec&&dob)return 'person2:'+name+'|'+cls+'|'+sec+'|'+dob;
+   if(name&&cls&&sec&&roll)return 'person3:'+name+'|'+cls+'|'+sec+'|roll:'+roll;
+   return '';
+ };
+
+ // Combine local + Firebase records, but keep track of their source and ID.
+ const combined=[];
+ localList.forEach((s,i)=>{if(s&&s.id)combined.push({s,source:'local',index:i,id:String(s.id)});});
+ remoteList.forEach(s=>{if(s&&s.id)combined.push({s,source:'firebase',index:-1,id:String(s.id)});});
+ const groups=new Map();
+ combined.forEach(x=>{const k=identity(x.s);if(k){if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x);}});
+ const duplicateGroups=[...groups.values()].filter(g=>g.length>1);
+ if(!duplicateGroups.length)return toast('No duplicate student records found');
+
+ // Prefer one local record as the master when available, otherwise first cloud record.
+ const remove=[];
+ duplicateGroups.forEach(g=>{
+   const master=g.find(x=>x.source==='local')||g[0];
+   g.forEach(x=>{if(x!==master)remove.push(x);});
  });
- if(!remove.length)return toast('No duplicate student names found');
- const names=[...new Set(remove.map(x=>String(x.s.name||'').trim()))];
- if(!confirm('Found '+remove.length+' duplicate-name record(s). Keep the first record for each name and delete later matches?\n\n'+names.slice(0,10).join(', ')+(names.length>10?'…':'')))return;
- const removedIds=remove.map(x=>String(x.s.id));
- const removedSet=new Set(remove.map(x=>x.index));
- students=(students||[]).filter((s,i)=>!removedSet.has(i));
- // Remove related data only for IDs that no longer exist after de-duplication.
- const remainingIds=new Set(students.map(s=>String(s.id)));
- const trulyRemoved=new Set(removedIds.filter(id=>!remainingIds.has(id)));
- marks=(marks||[]).filter(m=>!trulyRemoved.has(String(m.studentId)));
- fees=(fees||[]).filter(f=>!trulyRemoved.has(String(f.studentId)));
+ const removeIds=[...new Set(remove.filter(x=>x.source==='firebase').map(x=>x.id))];
+ const localRemoveIds=new Set(remove.filter(x=>x.source==='local').map(x=>x.id));
+ const names=[...new Set(duplicateGroups.map(g=>String(g[0].s?.name||g[0].s?.studentName||g[0].id).trim()).filter(Boolean))];
+ if(!confirm('Found '+remove.length+' duplicate record(s) across LOCAL + FIREBASE. Keep one master record for each duplicate group and permanently delete the extra records from Firebase and localStorage?\n\n'+names.slice(0,10).join(', ')+(names.length>10?'…':'')))return;
+
+ let cloudDeleted=0, cloudFailed=0;
+ for(const id of removeIds){
+   try{const ok=await window.firebaseStudentAPI?.deleteStudent?.(id);if(ok)cloudDeleted++;else cloudFailed++;}
+   catch(e){console.error('Duplicate Firebase delete error',id,e);cloudFailed++;}
+ }
+
+ // If any cloud deletion failed, DO NOT hide the record locally; otherwise it
+ // would come back on next login from Firestore.
+ if(cloudFailed){
+   return toast(cloudDeleted+' duplicate Firebase record(s) deleted, but '+cloudFailed+' could not be deleted. Local data was kept safe. Check Firebase Rules/connection and retry.');
+ }
+
+ // Remove only local duplicates whose cloud counterpart (if any) was deleted.
+ students=localList.filter(s=>!localRemoveIds.has(String(s?.id||'')));
+ window.students=students;
+ const trulyRemoved=new Set(localRemoveIds);
+ marks=(Array.isArray(marks)?marks:[]).filter(m=>!trulyRemoved.has(String(m?.studentId||'')));
+ fees=(Array.isArray(fees)?fees:[]).filter(f=>!trulyRemoved.has(String(f?.studentId||'')));
  Object.keys(attendance||{}).forEach(d=>{if(attendance[d]&&typeof attendance[d]==='object')trulyRemoved.forEach(id=>delete attendance[d][id]);});
  save(KEY.students,students);save(KEY.marks,marks);save(KEY.fees,fees);save(KEY.attendance,attendance);
- try{localStorage.setItem('PG_STUDENTS',JSON.stringify(students));window.students=students;}catch(e){}
- renderStudents();refreshAll();toast(remove.length+' duplicate-name student record(s) deleted');
+ try{localStorage.setItem('PG_STUDENTS',JSON.stringify(students));}catch(e){}
+ renderStudents();refreshAll();
+ toast(remove.length+' duplicate record(s) removed. Firebase: '+cloudDeleted+' deleted; local: '+localRemoveIds.size+' deleted.');
 }
+
 const _renderFees0=renderFees;renderFees=function(){if(currentRole!=='student'){_renderFees0();return}const own=fees.filter(f=>String(f.studentId)===String(currentStudentId)),s=students.find(x=>String(x.id)===String(currentStudentId)),t=document.getElementById('feeTable');if(!t)return;t.innerHTML=own.length?own.map(f=>{const p=Math.max(0,(+f.demand||0)-(+f.paid||0)),st=p===0?'Paid':f.paid>0?'Partial':'Unpaid';return `<tr><td>${escapeHtml(f.receipt||'')}</td><td>${escapeHtml(s?.name||'')}</td><td>${escapeHtml(s?.className||'-')}-${escapeHtml(s?.section||'-')}</td><td>${escapeHtml(f.head||'')}</td><td>₹${+f.demand||0}</td><td>₹${+f.paid||0}</td><td>₹${p}</td><td>${st}</td><td>${escapeHtml(f.date||'')}</td><td>—</td></tr>`}).join(''):'<tr><td colspan="10" class="empty">No fee records found.</td></tr>';const d=own.reduce((a,f)=>a+(+f.demand||0),0),paid=own.reduce((a,f)=>a+(+f.paid||0),0);document.getElementById('feeDemand').textContent='₹'+d;document.getElementById('feeCollected').textContent='₹'+paid;document.getElementById('feePending').textContent='₹'+Math.max(0,d-paid);document.getElementById('feeRecords').textContent=own.length};
 
 async function updateLatestMessages(){const el=document.getElementById('latestMessages');if(!el)return;let a=[];try{a=await window.firebaseMessagingAPI?.load()||[]}catch(e){}if(!a.length){try{a=JSON.parse(localStorage.getItem('PG_MESSAGES')||'[]')}catch(e){}}const me=currentRole==='student'?currentStudentId:'admin';a=a.filter(m=>String(m.receiverId)===String(me)||String(m.senderId)===String(me)).sort((x,y)=>new Date(y.createdAt)-new Date(x.createdAt)).slice(0,5);el.innerHTML=a.length?a.map(m=>`<div class="latest-msg-item"><b>${escapeHtml(m.senderName||'User')}</b>: ${escapeHtml((m.text||'📎 Attachment').slice(0,140))}<div class="small">${new Date(m.createdAt).toLocaleString()} • ${m.read?'Seen':'Sent'}</div></div>`).join(''):'<div class="empty">No messages yet.</div>'}
@@ -2207,35 +2296,61 @@ const _renderMsg0=window.renderMessages;window.renderMessages=async function(){i
   window.deleteAllStudents = function(){ return window.clearAllStudentData(); };
   window.clearAllStudentData=async function(){
     if(typeof window.requireAdmin==='function'&&!window.requireAdmin())return;
-    const localArr=Array.isArray(window.students)?window.students:[];
+
+    let localArr=Array.isArray(window.students)?window.students:[];
     let remoteArr=[];
-    try{remoteArr=await window.firebaseStudentAPI?.loadStudents?.()||[]}catch(e){alert('Firebase से student list नहीं पढ़ पाए। कोई data delete नहीं किया गया।');return;}
+    try{
+      remoteArr=await window.firebaseStudentAPI?.loadStudents?.()||[];
+    }catch(e){
+      alert('Firebase से student list नहीं पढ़ पाए। Cloud data सुरक्षित रखा गया है।');
+      return;
+    }
+
     const byId=new Map();
     [...localArr,...remoteArr].forEach(st=>{if(st&&st.id)byId.set(String(st.id),st)});
     const arr=[...byId.values()];
-    if(!arr.length){
-      const marked=await window.firebaseStudentAPI?.setCollectionCleared?.(true);
-      localStorage.setItem('PG_STUDENTS','[]');window.students=[];try{students=[]}catch(e){}
-      alert(marked?'Student list पहले से खाली थी; cloud clear marker सेव कर दिया गया।':'Student list खाली है, लेकिन cloud clear marker सेव नहीं हुआ। Firebase Rules जाँचें.');
-      return;
+
+    if(!confirm('WARNING: इस browser के localStorage और Firebase दोनों से सभी '+arr.length+' student records तथा उनसे जुड़े local marks/fees/attendance हटेंगे। यह वापस नहीं किया जा सकेगा। पहले backup लें। जारी रखें?'))return;
+
+    const btn=[...document.querySelectorAll('button')].find(b=>b.getAttribute('onclick')==='clearAllStudentData()');
+    if(btn){btn.disabled=true;btn.textContent='Deleting…'}
+
+    let cloudFail=0, deleted=0;
+    for(const st of arr){
+      try{
+        const ok=await window.firebaseStudentAPI?.deleteStudent?.(st.id);
+        if(ok) deleted++; else cloudFail++;
+      }catch(e){cloudFail++;}
     }
-    if(!confirm('WARNING: Firebase और इस browser से सभी '+arr.length+' student records हटेंगे। यह वापस नहीं किया जा सकेगा। पहले backup लें। जारी रखें?'))return;
-    const btn=[...document.querySelectorAll('button')].find(b=>b.getAttribute('onclick')==='clearAllStudentData()');if(btn){btn.disabled=true;btn.textContent='Deleting…'}
-    let cloudOK=0,cloudFail=0;
-    for(const st of arr){try{const ok=await window.firebaseStudentAPI?.deleteStudent?.(st.id);if(ok)cloudOK++;else cloudFail++;}catch(e){cloudFail++;}}
+
     let remaining=[];
-    try{remaining=await window.firebaseStudentAPI?.loadStudents?.()||[]}catch(e){cloudFail++;}
+    try{remaining=await window.firebaseStudentAPI?.loadStudents?.()||[];}catch(e){cloudFail++;}
+
     if(cloudFail===0 && remaining.length===0){
       const markerOK=await window.firebaseStudentAPI?.setCollectionCleared?.(true);
-      if(markerOK){localStorage.setItem('PG_STUDENTS','[]');window.students=[];try{students=[]}catch(e){};try{renderStudents();refreshAll()}catch(e){};
-        alert('सफलता: '+cloudOK+' student records Firebase से हटाए गए। Cloud clear marker सेव है, इसलिए stale local list वापस upload नहीं होनी चाहिए।');
-      }else{
-        alert('Firebase से records हट गए, लेकिन clear marker सेव नहीं हुआ। Firebase Rules में erp_meta write permission जाँचें; दूसरे device की पुरानी local list फिर upload हो सकती है।');
-      }
-    }else{
-      alert('Deletion पूरी नहीं हुई। सफल: '+cloudOK+', असफल/बाकी: '+Math.max(cloudFail,remaining.length)+'. Local list जानबूझकर clear नहीं की गई ताकि बाकी records का पता रहे। Firebase Console और Firestore Rules जाँचें।');
+
+      /* Clear every student-related local cache only after Firestore is verified empty. */
+      localStorage.removeItem('PG_STUDENTS');
+      window.students=[];
+      try{students=[];}catch(e){}
+      try{
+        marks=(marks||[]).filter(()=>false); save(KEY.marks,[]);
+        fees=(fees||[]).filter(()=>false); save(KEY.fees,[]);
+        attendance={}; save(KEY.attendance,{});
+      }catch(e){}
+
+      try{window.marks=[];window.fees=[];window.attendance={};}catch(e){}
+      try{renderStudents();refreshAll();}catch(e){}
+
+      if(btn){btn.disabled=false;btn.textContent='Delete All Students';}
+      alert(markerOK
+        ? 'सफलता: सभी student records Firebase और इस browser के localStorage दोनों से delete हो गए। अब deleted students वापस नहीं आने चाहिए।'
+        : 'Firebase और localStorage से students delete हो गए, लेकिन cloud clear marker save नहीं हुआ। Firebase Rules में erp_meta write permission जाँचें।');
+      return;
     }
-    if(btn){btn.disabled=false;btn.textContent='Delete All Students'}
+
+    if(btn){btn.disabled=false;btn.textContent='Delete All Students';}
+    alert('Deletion पूरी नहीं हुई। Firebase में अभी '+remaining.length+' student record(s) बाकी हैं। इसलिए local copy भी सुरक्षित रखी गई है। Firebase Rules/permissions जाँचें और फिर दोबारा Clear All Student Data चलाएँ।');
   };
 
   // Read status is stored in Firebase; a read message is never re-alerted from the local cache.
@@ -2244,4 +2359,100 @@ const _renderMsg0=window.renderMessages;window.renderMessages=async function(){i
 })();
 </script>
 
+
+<script>
+(function(){
+const UM_JUNIOR=['Math','Science','Social Science','English','Sanskrit','Sanskrit Vyakaran','Sanskrit Sahitya','Hindi','IT'];
+const UM_SENIOR=['Sanskrit','Political Science','History','Physical Education','Yoga','Web Application','Music','Painting','English','Economics'];
+let umStudents=[];
+let umSelected=[];
+function umClassIsSenior(){const c=document.getElementById('umClass')?.value; return c==='XI'||c==='XII';}
+function umGetSubjects(s){
+  let v=s?.subjects ?? s?.selectedSubjects ?? s?.Subjects ?? s?.subjectList;
+  if(Array.isArray(v)) return v.map(x=>String(x).trim()).filter(Boolean);
+  if(typeof v==='string') return v.split(/[,|;]/).map(x=>x.trim()).filter(Boolean);
+  const a=[]; for(let i=1;i<=5;i++){const x=s?.['subject'+i] ?? s?.['Subject'+i] ?? s?.['subject_'+i]; if(x) a.push(String(x).trim());} return a;
+}
+function umRenderSubjects(){
+  const c=document.getElementById('umClass').value, box=document.getElementById('umSubjects'); box.innerHTML=''; umSelected=[];
+  if(!c){document.getElementById('umSubjectHelp').textContent='पहले class select करें।'; document.getElementById('umSubjectCount').textContent='0 selected'; return;}
+  const arr=(c==='XI'||c==='XII')?UM_SENIOR:UM_JUNIOR;
+  document.getElementById('umSubjectHelp').textContent=(c==='XI'||c==='XII')?'सभी available subjects चुनें। हर student के अपने 5 subjects ही editable होंगे और total 500 रहेगा।':'Class के लिए जितने subjects चाहिए उतने select करें।';
+  arr.forEach(sub=>{const l=document.createElement('label'); const i=document.createElement('input'); i.type='checkbox'; i.value=sub; i.onchange=umSyncSubjects; l.append(i,document.createTextNode(sub)); box.appendChild(l);});
+  /* XI-XII: do not auto-select all subjects. Select the student's actual 5 subjects (or any required set) manually. */
+}
+function umSyncSubjects(){umSelected=[...document.querySelectorAll('#umSubjects input:checked')].map(x=>x.value);document.getElementById('umSubjectCount').textContent=umSelected.length+' selected';}
+function umSelectAll(){document.querySelectorAll('#umSubjects input').forEach(x=>x.checked=true);umSyncSubjects();}
+function umClearSubjects(){document.querySelectorAll('#umSubjects input').forEach(x=>x.checked=false);umSyncSubjects();}
+function umStudentId(s){return String(s?.id ?? s?.studentId ?? s?.admissionNo ?? '').trim();}
+function umStudentName(s){return s?.name ?? s?.studentName ?? s?.fullName ?? '';}
+function umStudentClass(s){return String(s?.className ?? s?.class ?? s?.standard ?? '').trim();}
+function umSection(s){return String(s?.section ?? '').trim();}
+function umSame(a,b){return String(a).trim().toLowerCase()===String(b).trim().toLowerCase();}
+function umStatus(t){const e=document.getElementById('umStatus'); e.textContent=t;}
+function umLoadStudents(){
+  const c=document.getElementById('umClass').value, sec=document.getElementById('umSection').value;
+  if(!c){umStatus('❌ पहले class select करें।');return;}
+  umSyncSubjects(); if(!umSelected.length){umStatus('❌ कम से कम 1 subject select करें।');return;}
+  const list=Array.isArray(window.students)?window.students:(typeof currentStudents==='function'?currentStudents():[]);
+  umStudents=list.filter(s=>umSame(umStudentClass(s),c)&&(!sec||umSame(umSection(s),sec)));
+  umRenderTable(); umStatus('✅ '+umStudents.length+' students loaded.');
+}
+function umRenderTable(){
+ const box=document.getElementById('umTableBox'); if(!umStudents.length){box.innerHTML='<div class="empty">इस class में कोई student नहीं मिला।</div>';return;}
+ let h='<table><thead><tr><th>ID</th><th>Student Name</th>';
+ umSelected.forEach(s=>h+='<th>'+s+'<br><span class="small">/ '+(document.getElementById('umMaxPerSubject').value||100)+'</span></th>');
+ h+='<th>Obtained</th><th>Maximum</th><th>Percentage</th></tr></thead><tbody>';
+ umStudents.forEach((st,ri)=>{
+   const own=umGetSubjects(st); h+='<tr data-um-row="'+ri+'"><td>'+escapeHtml(String(umStudentId(st)))+'</td><td>'+escapeHtml(String(umStudentName(st)))+'</td>';
+   umSelected.forEach(sub=>{
+      /* Senior students may have subject metadata in Excel. If it is absent, keep the
+         selected subjects editable instead of disabling every XI-XII mark field. */
+      const active=!umClassIsSenior() || !own.length || own.some(x=>umSame(x,sub));
+      h+='<td><input class="input um-mark-input" type="number" min="0" max="'+(document.getElementById('umMaxPerSubject').value||100)+'" step="0.01" data-ri="'+ri+'" data-sub="'+escapeHtml(sub)+'" '+(active?'':'disabled placeholder="—"')+' oninput="umCalcRow('+ri+')"></td>';
+    });
+   h+='<td class="um-obtained">0</td><td class="um-maximum">'+(umClassIsSenior()?500:umSelected.length*(Number(document.getElementById('umMaxPerSubject').value)||100))+'</td><td class="um-percentage um-pct-pending">Pending</td></tr>';
+ });
+ h+='</tbody></table>'; box.innerHTML=h; umStudents.forEach((_,i)=>umCalcRow(i));
+}
+function umCalcRow(ri){
+ const row=document.querySelector('#umTableBox tr[data-um-row="'+ri+'"]'); if(!row)return;
+ const inputs=[...row.querySelectorAll('.um-mark-input')].filter(x=>!x.disabled);
+ const vals=inputs.map(x=>x.value===''?null:Number(x.value));
+ const filled=vals.filter(v=>v!==null);
+ const senior=umClassIsSenior();
+ const max=senior?500:inputs.length*(Number(document.getElementById('umMaxPerSubject').value)||100);
+ const required=senior?5:inputs.length;
+ const complete=senior
+   ? filled.length===5 && filled.every(v=>Number.isFinite(v)&&v>=0&&v<=100)
+   : inputs.length===required&&filled.length===required&&vals.every(v=>Number.isFinite(v)&&v>=0&&v<=(Number(document.getElementById('umMaxPerSubject').value)||100));
+ const obt=filled.reduce((a,b)=>a+b,0);
+ row.querySelector('.um-obtained').textContent=filled.length?obt.toFixed(2):'0';
+ row.querySelector('.um-maximum').textContent=max;
+ const p=row.querySelector('.um-percentage');
+ if(complete){p.textContent=(obt/max*100).toFixed(2)+'%';p.className='um-percentage um-pct-good';}
+ else{p.textContent='Pending';p.className='um-percentage um-pct-pending';}
+}
+async function umSaveMarks(){
+ if(!umStudents.length){umStatus('❌ पहले Import Students करें।');return;} const exam=document.getElementById('umExam').value, maxPer=Number(document.getElementById('umMaxPerSubject').value)||100, saved=[];
+ for(let i=0;i<umStudents.length;i++){
+   const st=umStudents[i], row=document.querySelector('#umTableBox tr[data-um-row="'+i+'"]'), inputs=[...row.querySelectorAll('.um-mark-input')].filter(x=>!x.disabled), vals=inputs.map(x=>x.value===''?null:Number(x.value));
+   const filledInputs=inputs.filter(x=>x.value!=='');
+   const filledVals=filledInputs.map(x=>Number(x.value));
+   if(umClassIsSenior()){
+     if(filledInputs.length!==5 || filledVals.some(v=>!Number.isFinite(v)||v<0||v>100)){umStatus('❌ '+umStudentName(st)+' के लिए ठीक 5 subjects के marks (0-100) भरें।');return;}
+   }else if(vals.some(v=>v===null||!Number.isFinite(v)||v<0||v>maxPer)){umStatus('❌ '+umStudentName(st)+' के marks अधूरे हैं।');return;}
+   const subjectMarks={}; filledInputs.forEach(x=>subjectMarks[x.dataset.sub]=Number(x.value));
+   const obtained=Object.values(subjectMarks).reduce((a,b)=>a+b,0), maximum=umClassIsSenior()?500:Object.keys(subjectMarks).length*maxPer;
+   const mark={studentId:umStudentId(st),studentName:umStudentName(st),className:umStudentClass(st),section:umSection(st),exam,subjects:subjectMarks,obtainedMarks:obtained,maximumMarks:maximum,percentage:Number((obtained/maximum*100).toFixed(2)),total:obtained,max:maximum,updatedAt:new Date().toISOString()};
+   if(typeof saveMarkToFirebase==='function') await saveMarkToFirebase(mark);
+   saved.push(mark);
+ }
+ window.marks=Array.isArray(window.marks)?window.marks:[]; saved.forEach(n=>{const idx=window.marks.findIndex(x=>String(x.studentId)===String(n.studentId)&&String(x.exam)===String(n.exam)); if(idx>=0) window.marks[idx]=n; else window.marks.push(n);}); if(typeof saveLocal==='function') saveLocal('PG_MARKS',window.marks); if(typeof renderMarks==='function') renderMarks(); umStatus('✅ '+saved.length+' students के marks Firebase में save हो गए।');
+}
+function umClearTable(){umStudents=[];document.getElementById('umTableBox').innerHTML='<div class="empty">Students will appear here.</div>';umStatus('Table cleared.');}
+function umExportExcel(){const table=document.querySelector('#umTableBox table');if(!table){umStatus('❌ पहले students load करें।');return;} let csv=[...table.rows].map(r=>[...r.cells].map(c=>{const i=c.querySelector('input');return '"'+String(i?i.value:c.innerText).replaceAll('"','""')+'"';}).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='marks_'+(document.getElementById('umClass').value||'class')+'_'+(document.getElementById('umExam').value||'exam')+'.csv';a.click();URL.revokeObjectURL(a.href);}
+window.umRenderSubjects=umRenderSubjects;window.umSelectAll=umSelectAll;window.umClearSubjects=umClearSubjects;window.umLoadStudents=umLoadStudents;window.umCalcRow=umCalcRow;window.umSaveMarks=umSaveMarks;window.umClearTable=umClearTable;window.umExportExcel=umExportExcel;
+})();
+</script>
 </body></html>
