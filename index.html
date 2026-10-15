@@ -2147,78 +2147,87 @@ function removeStudentsByIds(ids){const set=new Set(ids.map(String));students=st
 function deleteSelectedStudents(){if(!requireAdmin())return;const ids=[...document.querySelectorAll('.student-select-box:checked')].map(x=>x.value);if(!ids.length)return toast('Select students first');if(confirm('Delete '+ids.length+' selected students and related records?'))removeStudentsByIds(ids)}
 function deleteAllStudents(){if(!requireAdmin())return;if(confirm('Delete ALL students and related marks, fees and attendance? This cannot be undone.'))removeStudentsByIds(students.map(s=>String(s.id)))}
 async function deleteDuplicateStudents(){
- if(!requireAdmin())return;
- const localList=Array.isArray(students)?students:[];
- let remoteList=[];
- try{
-   remoteList=await window.firebaseStudentAPI?.loadStudents?.()||[];
- }catch(e){return toast('Firebase student list load नहीं हो सकी। Delete नहीं किया गया।');}
- if(localList.length+remoteList.length<2)return toast('No duplicate student records found');
+  if(!requireAdmin())return;
+  const localList=Array.isArray(students)?students:[];
+  let remoteList=[];
+  try{remoteList=await window.firebaseStudentAPI?.loadStudents?.()||[];}
+  catch(e){return toast('Firebase student list load नहीं हो सकी। Delete नहीं किया गया।');}
 
- // Build a strong identity key. Prefer admission/roll/id; otherwise use
- // name + father + class + section + DOB. This avoids deleting two students
- // who only happen to have the same name.
- const norm=v=>String(v??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
- const identity=s=>{
-   const id=norm(s?.id||s?.studentId||s?.admissionNo);
-   if(id)return 'id:'+id;
-   const admission=norm(s?.admissionNo||s?.admissionNumber||s?.admission);
-   if(admission)return 'adm:'+admission;
-   const roll=norm(s?.rollNo||s?.rollNumber);
-   const name=norm(s?.name||s?.studentName||s?.fullName);
-   const father=norm(s?.father||s?.fatherName||s?.guardian);
-   const cls=norm(s?.className||s?.class||s?.standard);
-   const sec=norm(s?.section);
-   const dob=norm(s?.dob||s?.dateOfBirth);
-   if(name&&cls&&sec&&father)return 'person:'+name+'|'+father+'|'+cls+'|'+sec+'|'+dob;
-   if(name&&cls&&sec&&dob)return 'person2:'+name+'|'+cls+'|'+sec+'|'+dob;
-   if(name&&cls&&sec&&roll)return 'person3:'+name+'|'+cls+'|'+sec+'|roll:'+roll;
-   return '';
- };
+  const norm=v=>String(v??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+  const personKey=s=>{
+    const name=norm(s?.name||s?.studentName||s?.fullName);
+    const father=norm(s?.father||s?.fatherName||s?.guardian);
+    const cls=norm(s?.className||s?.class||s?.standard);
+    const sec=norm(s?.section);
+    const dob=norm(s?.dob||s?.dateOfBirth);
+    const mobile=norm(s?.mobile||s?.mobileNumber||s?.phone);
+    if(name&&cls&&sec&&father) return 'person:'+name+'|'+father+'|'+cls+'|'+sec+'|'+dob;
+    if(name&&cls&&sec&&dob) return 'person2:'+name+'|'+cls+'|'+sec+'|'+dob;
+    if(name&&cls&&sec&&mobile) return 'person3:'+name+'|'+cls+'|'+sec+'|'+mobile;
+    return '';
+  };
 
- // Combine local + Firebase records, but keep track of their source and ID.
- const combined=[];
- localList.forEach((s,i)=>{if(s&&s.id)combined.push({s,source:'local',index:i,id:String(s.id)});});
- remoteList.forEach(s=>{if(s&&s.id)combined.push({s,source:'firebase',index:-1,id:String(s.id)});});
- const groups=new Map();
- combined.forEach(x=>{const k=identity(x.s);if(k){if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x);}});
- const duplicateGroups=[...groups.values()].filter(g=>g.length>1);
- if(!duplicateGroups.length)return toast('No duplicate student records found');
+  /* IMPORTANT: Do NOT use ID as the only duplicate key. Two copies of the same
+     student can have different Firebase document IDs. Match identity by
+     student details first, while still treating an exact same ID as duplicate. */
+  const combined=[];
+  localList.forEach((s,i)=>{if(s&&s.id)combined.push({s,source:'local',index:i,id:String(s.id)});});
+  remoteList.forEach(s=>{if(s&&s.id)combined.push({s,source:'firebase',index:-1,id:String(s.id)});});
 
- // Prefer one local record as the master when available, otherwise first cloud record.
- const remove=[];
- duplicateGroups.forEach(g=>{
-   const master=g.find(x=>x.source==='local')||g[0];
-   g.forEach(x=>{if(x!==master)remove.push(x);});
- });
- const removeIds=[...new Set(remove.filter(x=>x.source==='firebase').map(x=>x.id))];
- const localRemoveIds=new Set(remove.filter(x=>x.source==='local').map(x=>x.id));
- const names=[...new Set(duplicateGroups.map(g=>String(g[0].s?.name||g[0].s?.studentName||g[0].id).trim()).filter(Boolean))];
- if(!confirm('Found '+remove.length+' duplicate record(s) across LOCAL + FIREBASE. Keep one master record for each duplicate group and permanently delete the extra records from Firebase and localStorage?\n\n'+names.slice(0,10).join(', ')+(names.length>10?'…':'')))return;
+  const groups=new Map();
+  combined.forEach(x=>{
+    const pk=personKey(x.s);
+    const idKey='id:'+norm(x.id);
+    const keys=[idKey]; if(pk)keys.push(pk);
+    keys.forEach(k=>{if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x);});
+  });
 
- let cloudDeleted=0, cloudFailed=0;
- for(const id of removeIds){
-   try{const ok=await window.firebaseStudentAPI?.deleteStudent?.(id);if(ok)cloudDeleted++;else cloudFailed++;}
-   catch(e){console.error('Duplicate Firebase delete error',id,e);cloudFailed++;}
- }
+  /* Merge overlapping groups so the same person found by both ID and person
+     identity is handled as one duplicate group. */
+  const parent=new Map();
+  const find=x=>{parent.set(x,parent.get(x)===x?x:find(parent.get(x)));return parent.get(x)};
+  const union=(a,b)=>{a=find(a);b=find(b);if(a!==b)parent.set(b,a)};
+  combined.forEach(x=>parent.set(x,x));
+  groups.forEach(g=>{for(let i=1;i<g.length;i++)union(g[0],g[i]);});
+  const mergedGroups=new Map();
+  combined.forEach(x=>{const root=find(x);if(!mergedGroups.has(root))mergedGroups.set(root,[]);mergedGroups.get(root).push(x);});
+  const duplicateGroups=[...mergedGroups.values()].filter(g=>g.length>1);
+  if(!duplicateGroups.length)return toast('No duplicate student records found');
 
- // If any cloud deletion failed, DO NOT hide the record locally; otherwise it
- // would come back on next login from Firestore.
- if(cloudFailed){
-   return toast(cloudDeleted+' duplicate Firebase record(s) deleted, but '+cloudFailed+' could not be deleted. Local data was kept safe. Check Firebase Rules/connection and retry.');
- }
+  const remove=[];
+  duplicateGroups.forEach(g=>{
+    /* Prefer the local record as master so current browser edits survive. If
+       there are multiple local copies, keep the first and remove the rest. */
+    const master=g.find(x=>x.source==='local')||g[0];
+    g.forEach(x=>{if(x!==master)remove.push(x);});
+  });
 
- // Remove only local duplicates whose cloud counterpart (if any) was deleted.
- students=localList.filter(s=>!localRemoveIds.has(String(s?.id||'')));
- window.students=students;
- const trulyRemoved=new Set(localRemoveIds);
- marks=(Array.isArray(marks)?marks:[]).filter(m=>!trulyRemoved.has(String(m?.studentId||'')));
- fees=(Array.isArray(fees)?fees:[]).filter(f=>!trulyRemoved.has(String(f?.studentId||'')));
- Object.keys(attendance||{}).forEach(d=>{if(attendance[d]&&typeof attendance[d]==='object')trulyRemoved.forEach(id=>delete attendance[d][id]);});
- save(KEY.students,students);save(KEY.marks,marks);save(KEY.fees,fees);save(KEY.attendance,attendance);
- try{localStorage.setItem('PG_STUDENTS',JSON.stringify(students));}catch(e){}
- renderStudents();refreshAll();
- toast(remove.length+' duplicate record(s) removed. Firebase: '+cloudDeleted+' deleted; local: '+localRemoveIds.size+' deleted.');
+  const removeIds=[...new Set(remove.filter(x=>x.source==='firebase').map(x=>x.id))];
+  const localRemoveIds=new Set(remove.filter(x=>x.source==='local').map(x=>x.id));
+  const names=[...new Set(duplicateGroups.map(g=>String(g[0].s?.name||g[0].s?.studentName||g[0].id).trim()).filter(Boolean))];
+  if(!confirm('Found '+remove.length+' duplicate record(s). Keep one master record for each student and permanently delete the extra Firebase/local records?\n\n'+names.slice(0,15).join(', ')+(names.length>15?'…':'')))return;
+
+  let cloudDeleted=0,cloudFailed=0;
+  for(const id of removeIds){
+    try{
+      const ok=await window.firebaseStudentAPI?.deleteStudent?.(id);
+      if(ok)cloudDeleted++;else cloudFailed++;
+    }catch(e){console.error('Duplicate Firebase delete error',id,e);cloudFailed++;}
+  }
+  if(cloudFailed){
+    return toast(cloudDeleted+' Firebase duplicate(s) deleted, but '+cloudFailed+' could not be deleted. Local data was kept safe. Retry after checking Firebase connection/rules.');
+  }
+
+  students=localList.filter(s=>!localRemoveIds.has(String(s?.id||'')));
+  window.students=students;
+  const trulyRemoved=localRemoveIds;
+  marks=(Array.isArray(marks)?marks:[]).filter(m=>!trulyRemoved.has(String(m?.studentId||'')));
+  fees=(Array.isArray(fees)?fees:[]).filter(f=>!trulyRemoved.has(String(f?.studentId||'')));
+  Object.keys(attendance||{}).forEach(d=>{if(attendance[d]&&typeof attendance[d]==='object')trulyRemoved.forEach(id=>delete attendance[d][id]);});
+  save(KEY.students,students);save(KEY.marks,marks);save(KEY.fees,fees);save(KEY.attendance,attendance);
+  localStorage.setItem('PG_STUDENTS',JSON.stringify(students));
+  renderStudents();refreshAll();
+  toast(remove.length+' duplicate record(s) removed. Firebase: '+cloudDeleted+' deleted; local: '+localRemoveIds.size+' deleted.');
 }
 
 const _renderFees0=renderFees;renderFees=function(){if(currentRole!=='student'){_renderFees0();return}const own=fees.filter(f=>String(f.studentId)===String(currentStudentId)),s=students.find(x=>String(x.id)===String(currentStudentId)),t=document.getElementById('feeTable');if(!t)return;t.innerHTML=own.length?own.map(f=>{const p=Math.max(0,(+f.demand||0)-(+f.paid||0)),st=p===0?'Paid':f.paid>0?'Partial':'Unpaid';return `<tr><td>${escapeHtml(f.receipt||'')}</td><td>${escapeHtml(s?.name||'')}</td><td>${escapeHtml(s?.className||'-')}-${escapeHtml(s?.section||'-')}</td><td>${escapeHtml(f.head||'')}</td><td>₹${+f.demand||0}</td><td>₹${+f.paid||0}</td><td>₹${p}</td><td>${st}</td><td>${escapeHtml(f.date||'')}</td><td>—</td></tr>`}).join(''):'<tr><td colspan="10" class="empty">No fee records found.</td></tr>';const d=own.reduce((a,f)=>a+(+f.demand||0),0),paid=own.reduce((a,f)=>a+(+f.paid||0),0);document.getElementById('feeDemand').textContent='₹'+d;document.getElementById('feeCollected').textContent='₹'+paid;document.getElementById('feePending').textContent='₹'+Math.max(0,d-paid);document.getElementById('feeRecords').textContent=own.length};
