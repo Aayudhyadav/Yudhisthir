@@ -168,7 +168,31 @@ function doLogin(){let id=document.getElementById('loginId').value.trim(),pw=doc
 function applyRolePermissions(){document.body.classList.toggle('student-mode',currentRole==='student');let name=currentRole==='student'?(students.find(s=>s.id===currentStudentId)?.name||currentStudentId):'Administrator';document.getElementById('headerUserName').textContent=name;document.getElementById('headerRole').textContent=currentRole==='student'?'STUDENT':'ADMIN';document.querySelectorAll('.nav-item').forEach(n=>n.style.display=(currentRole==='student'&&n.getAttribute('onclick')?.includes("'bulkStudents'"))?'none':'');document.querySelectorAll('.bulk-submenu').forEach(n=>n.style.display=currentRole==='student'?'none':'');}
 function getVisibleStudents(){return students}
 function requireAdmin(){if(currentRole!=='admin'){toast('Student account read-only है');return false}return true}
-function logout(){localStorage.removeItem('PG_LOGIN_ROLE');localStorage.removeItem('PG_LOGIN_STUDENT_ID');location.reload()}
+function logout(){
+  try{
+    localStorage.removeItem('PG_LOGIN_ROLE');
+    localStorage.removeItem('PG_LOGIN_STUDENT_ID');
+    localStorage.removeItem('PG_ADMIN_ID');
+    currentRole='';
+    currentStudentId='';
+    window.currentRole='';
+    window.currentStudentId='';
+    const screen=document.getElementById('loginScreen');
+    if(screen) screen.style.display='flex';
+    const id=document.getElementById('loginId');
+    const pw=document.getElementById('loginPassword');
+    if(id) id.value='';
+    if(pw) pw.value='';
+    if(typeof selectLoginRole==='function') selectLoginRole('admin');
+    if(typeof applyRolePermissions==='function') applyRolePermissions();
+    // Force a fresh document without relying on reload cache/state.
+    window.location.replace(window.location.href.split('#')[0]);
+  }catch(e){
+    console.error('Logout error:',e);
+    try{window.location.replace(window.location.href.split('#')[0]);}catch(_e){location.reload();}
+  }
+} 
+window.logout=logout;
 
 var students=load(KEY.students,[]), attendance=load(KEY.attendance,{}), marks=load(KEY.marks,[]), fees=load(KEY.fees,[]), settings=load(KEY.settings,null);
 window.students=students;window.attendance=attendance;window.marks=marks;window.fees=fees;window.settings=settings;
@@ -261,7 +285,31 @@ function exportData(){let data={students,attendance,marks,fees,settings,exported
 function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);students=d.students||[];attendance=d.attendance||{};marks=d.marks||[];fees=d.fees||[];settings=d.settings||null;Object.entries(KEY).forEach(([k,v])=>save(v,{students,attendance,marks,fees,settings}[k]));refreshAll();loadSettings();toast('Backup imported')}catch(err){toast('Invalid backup file')}};r.readAsText(f)}
 function clearAllData(){if(!requireAdmin())return;if(!confirm('This will remove all ERP data from this browser. Continue?'))return;Object.values(KEY).forEach(k=>localStorage.removeItem(k));location.reload()}
 function refreshAll(){renderStudents();renderAttendance();renderMarks();renderFees();renderReports();let today=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});document.getElementById('currentDate').textContent=today;let visible=getVisibleStudents(),ids=new Set(visible.map(s=>s.id));document.getElementById('dStudents').textContent=visible.length;let d=attendance[new Date().toISOString().slice(0,10)]||{};document.getElementById('dPresent').textContent=Object.entries(d).filter(([id])=>ids.has(id)&&d[id]==='Present').length;let vf=fees.filter(f=>ids.has(f.studentId));document.getElementById('dFees').textContent='₹'+vf.reduce((a,f)=>a+f.paid,0);let a=marks.filter(m=>ids.has(m.studentId)).map(calcMark);document.getElementById('dResult').textContent=(a.length?a.reduce((x,y)=>x+y.pct,0)/a.length:0).toFixed(1)+'%';document.getElementById('dashboardNotice').textContent=`${visible.length} students • ${marks.filter(m=>ids.has(m.studentId)).length} marks records • ${vf.length} fee records saved locally.`}
-function logout(){localStorage.removeItem('PG_LOGIN_ROLE');localStorage.removeItem('PG_LOGIN_STUDENT_ID');location.reload()}
+function logout(){
+  try{
+    localStorage.removeItem('PG_LOGIN_ROLE');
+    localStorage.removeItem('PG_LOGIN_STUDENT_ID');
+    localStorage.removeItem('PG_ADMIN_ID');
+    currentRole='';
+    currentStudentId='';
+    window.currentRole='';
+    window.currentStudentId='';
+    const screen=document.getElementById('loginScreen');
+    if(screen) screen.style.display='flex';
+    const id=document.getElementById('loginId');
+    const pw=document.getElementById('loginPassword');
+    if(id) id.value='';
+    if(pw) pw.value='';
+    if(typeof selectLoginRole==='function') selectLoginRole('admin');
+    if(typeof applyRolePermissions==='function') applyRolePermissions();
+    // Force a fresh document without relying on reload cache/state.
+    window.location.replace(window.location.href.split('#')[0]);
+  }catch(e){
+    console.error('Logout error:',e);
+    try{window.location.replace(window.location.href.split('#')[0]);}catch(_e){location.reload();}
+  }
+} 
+window.logout=logout;
 refreshAll();loadSettings();
 </script>
  <!-- ================= FIREBASE ONLINE DATABASE ================= -->
